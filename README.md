@@ -4,13 +4,21 @@ Collaborative filering consists in predicting the rating of items by a user by u
 
 The following module tackle the issue by using sparse denoising autoencoders.
 
-You may download the package and run the following command:
+You may run the program by executing the following command in the source folder:
 
 ```
 th main.lua
 ```
+The default behavior will predict the rating of the dataset movieLens-1M. (90% training, 10% rating)  
 
-The default behavior will try to predict the rating of the dataset movieLens-1M. (90% training, 10% rating)  
+
+Dependencies:
+ - torch
+ - nn
+ - xlua
+ - nnsparse
+ - optim
+
 
 The following options are also available:
 ```
@@ -22,7 +30,9 @@ The following options are also available:
 -seed         The random seed                                   Default = 1234
 ```
 
-One may also change the learninf process or the network architecture by using the file config.template.lua
+PS : fileType classic : one line ="idUser idItem rating"
+
+One may also change the learning process or the network architecture by using the file config.template.lua
 ```lua
 configV =          -- ConfigV --> learn Vencoder / configU --> learn Uencoder
 {
