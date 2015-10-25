@@ -1,4 +1,4 @@
-# Collaborative Filtering with Stacked Denoising Encoders and sparse Inputs
+# Collaborative Filtering with Stacked Denoising Encoders and Sparse Inputs
 
 Collaborative filering consists in predicting the rating of items by a user by using the feedback of all other users. In other words, it try to turn a spare matrix of ratings into a dense matrix of rating. 
 
@@ -24,7 +24,7 @@ The following option are also available:
 
 One may also change the learninf process or the network architecture by using the file config.template.lua
 ```lua
-configV =          -- ConfigV --> learn Vencoders / configU --> learn Uencoder
+configV =          -- ConfigV --> learn Vencoder / configU --> learn Uencoder
 {
    layer1 = 
    {      
@@ -65,15 +65,15 @@ configV =
    {
      isTied    = false, 
      coefLayer = 12,    
-     { Training 1 },  --inner layer
+     { Training 1 },  --inner hidden layers
      { Training 2 },  --final network
     },
     layer3 =
    { 
      isTied    = false, 
      coefLayer = 14,    
-    { Training 1 }, -- inner hidden layer
-    { Training 2 }, -- intermediate hidden layer
+    { Training 1 }, -- inner hidden layers
+    { Training 2 }, -- intermediate hidden layers
     { Training 3 }, -- final network
     }
     etc.
