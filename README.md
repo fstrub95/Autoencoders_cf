@@ -13,12 +13,14 @@ th main.lua
 The default behavior will try to predict the rating of the dataset movieLens-1M. (90% training, 10% rating)  
 
 The following option are also available:
+```
 -file         The relative path to your data file.              Default = ../data/movieLens/ratings-1M.dat
 -conf         The relative path to the lua configuration file.  Default = config.template.lua
 -ratio        The training ratio                                Default = 0.9                                
 -fileType     The data file format (jester/movieLens/classic)   Default = movieLens                       
 -seed         The random seed                                   Default = 1234
 -out          The path to store the final matrix (csv)          Default = ..
+```
 
 One may also change the learninf process or the network architecture by using the file config.template.lua
 ```lua
