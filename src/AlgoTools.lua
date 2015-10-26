@@ -3,6 +3,7 @@ require("torch")
 
 dofile ("tools.lua")
 
+require("nnsparse")
 
 
 
@@ -37,7 +38,7 @@ function algoTrain(train, test, algo, conf)
       algoLoss = algoLoss / noRating
       
 
-      print("Loss = " .. math.sqrt(algoLoss)/2)
+      print("Loss = " .. math.sqrt(algoLoss)*2)
 
       if algoLoss > bestLoss then
          print("early stopping")
@@ -48,7 +49,7 @@ function algoTrain(train, test, algo, conf)
 
    end
 
-   print("Algo loss = " .. math.sqrt(bestLoss)/2)
+   print("Algo loss = " .. math.sqrt(bestLoss)*2)
    return math.sqrt(bestLoss), algo.U, algo.V
 
 end

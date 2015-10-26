@@ -1,8 +1,12 @@
 require("nn")
 require("torch")
 
-dofile ("tools.lua")
+torch.setdefaulttensortype('torch.FloatTensor') 
+require("nnsparse")
 
+dofile("data.lua")
+dofile ("tools.lua")
+dofile ("AlgoTools.lua")
 
 GradDescent = {} 
 
@@ -108,10 +112,10 @@ end
 
 
 
-function pickBestGrad(train, test)
+function pickBestGrad(train, test, ranks, lambdas, learningRates)
 
 
- local ranks = 
+ranks = ranks or
 {
 --7,
 --8,
@@ -123,7 +127,7 @@ function pickBestGrad(train, test)
 20
 } 
 
-local lambdas = 
+lambdas = lambdas or
 { 
   0.005,
   0.01,
@@ -143,7 +147,7 @@ local lambdas =
   
 }
 
- local learningRates = 
+learningRates = learningRates or
 {
    0.01,
    0.02,
@@ -190,7 +194,7 @@ local lambdas =
 
    print("")
    print("-----------------------------------------")
-   print("Best Grad : " .. algoLoss/2)
+   print("Best Grad : " .. algoLoss*2)
    print(" - lrt    = " .. lrt)
    print(" - rank   = " .. rank)
    print(" - lambda = " .. lambda)
@@ -201,6 +205,50 @@ local lambdas =
 
 end
 
+
+----------------------------------------------------------------------
+-- parse command-line options
+--
+local arg = {}
+cmd = torch.CmdLine()
+cmd:text()
+cmd:text('Learn SDAE network for collaborative filtering')
+cmd:text()
+cmd:text('Options')
+-- general options:
+cmd:option('-fileType'    , "movieLens"                        , 'The data file format (jester/movieLens/classic)')
+cmd:option('-file'        , '../data/movieLens/ratings-1M.dat' , 'The relative path to your data file')
+cmd:option('-ratio'       , 0.9                                , 'The training ratio')
+cmd:option('-rank'        , 15                                 , 'Rank of the final matrix')
+cmd:option('-lambda'      , 0.05                               , 'Regularisation')
+cmd:option('-lrt'         , 0.02                               , 'Learning rate')
+cmd:option('-seed'        , 1234                               , 'The seed')
+cmd:option('-out '        , '../out.csv'                       , 'The path to store the final matrix (csv) ')
+cmd:text()
+
+
+
+local params = cmd:parse(arg)
+
+
+torch.manualSeed(params.seed)
+math.randomseed(params.seed)
+
+
+--Load data
+local train, test = LoadData(
+   {
+      type  = params.fileType,
+      ratio = params.ratio,
+      file  = params.file,
+   })
+   
+local U, V = pickBestGrad(train, test, {params.rank}, {params.lambda}, {params.lrt})
+
+
+print("Saving Matrix...")
+tensorToCsv(U*V:t(), params.out)
+print("done!")
 
 
 

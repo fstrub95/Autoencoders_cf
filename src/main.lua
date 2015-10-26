@@ -1,7 +1,6 @@
 -- Load global libraries
 require("nn")
 require("optim")
-require("sys") 
 require("xlua") 
 
 torch.setdefaulttensortype('torch.FloatTensor') 
@@ -33,15 +32,13 @@ cmd:option('-conf'        , "config.template.lua"              , 'The relative p
 cmd:option('-ratio'       , 0.9                                , 'The training ratio')
 cmd:option('-fileType'    , "movieLens"                        , 'The data file format (jester/movieLens/classic)')
 cmd:option('-seed'        , 1234                               , 'The seed')
-cmd:option('-out '        , 1234                               , 'The seed')
+cmd:option('-out'         , '../out.csv'                       , 'The path to store the final matrix (csv) ')
 cmd:text()
 
 
 
 
 local params = cmd:parse(arg)
-
-
 
 
 torch.manualSeed(params.seed)
@@ -83,12 +80,15 @@ elseif configV then
       v[{{}, 2}]:add(-train.V.info[k].mean) --center input
    end
 
-   _, estimate =trainV(train, test, configV)
+   _, estimate = trainV(train, test, configV)
 end
 
 
---TODO write in csv file
 
+print("Saving Matrix...")
+tensorToCsv(estimate, params.out)
+
+print("done!")
 
 
 

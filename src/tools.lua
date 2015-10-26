@@ -49,3 +49,21 @@ function GetSize(X,dim)
       return X:size(dim)
    end
 end
+
+function tensorToCsv(M, outFile)
+
+   print("This can take several minutes")
+
+   local ouputTrain = io.open(outFile, "w")
+   io.output(ouputTrain)
+   for i = 1, M:size(1) do
+      xlua.progress(i, M:size(1))
+      for j = 1, M:size(2) do
+         line = line .. M[i][j] .. " " 
+      end
+      io.write(line .. "\n")
+   end
+
+   io.close(ouputTrain)
+
+end

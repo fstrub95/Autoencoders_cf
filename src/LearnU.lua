@@ -118,8 +118,8 @@ local function trainNN(train, test, config, name)
    --Look for the best RMSE/MAE
    local bestRMSE, bestMAE = 999,999
    for noNetwork = 1, #error.rmse do
-      bestRMSE = math.max(bestRMSE, math.max(unpack(error.rmse[noNetwork])))
-      bestMAE  = math.max(bestMAE , math.max(unpack(error.mae [noNetwork])))
+      bestRMSE = math.min(bestRMSE, math.min(unpack(error.rmse[noNetwork])))
+      bestMAE  = math.min(bestMAE , math.min(unpack(error.mae [noNetwork])))
    end
    
    print("******** BEST RMSE = " .. bestRMSE)

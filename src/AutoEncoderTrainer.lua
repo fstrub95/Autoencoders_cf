@@ -186,7 +186,7 @@ function AutoEncoderTrainer:Execute(sgdOpt)
       local newReconstructionRMSE, newPredictionRMSE, newMAE = self:Test()
 
       --resclase RMSE/MAE
-      newPredictionRMSE     = newPredictionRMSE     * 2 
+      newPredictionRMSE     = newPredictionRMSE     * 2
       newMAE                = newMAE                * 2
 
       self.rmse[#self.rmse+1] =  newPredictionRMSE

@@ -1,5 +1,11 @@
-require("nn")
 require("torch")
+require("nn")
+
+torch.setdefaulttensortype('torch.FloatTensor') 
+
+require("nnsparse")
+
+   dofile("data.lua")
 
 dofile ("tools.lua")
 dofile ("AlgoTools.lua")
@@ -145,17 +151,12 @@ end
 
 
 
--- BEST ALS Jester
---
--- rank = 12
--- lambda = 0.04
--- Loss = 0.20622425120608
 
 
-function pickBestAls(train, test)
+function pickBestAls(train, test, ranks, lambdas)
 
 
- local ranks = 
+ranks = ranks or
 {
 --7,
 --8,
@@ -167,7 +168,7 @@ function pickBestAls(train, test)
 20
 } 
 
-local lambdas = 
+lambdas = lambdas or
 { 
   0.005,
   0.01,
@@ -220,7 +221,7 @@ end
 
    print("")
    print("-----------------------------------------")
-   print("ALS Grad : " .. alsLoss/2)
+   print("ALS loss : " .. alsLoss*2)
    print(" - rank   = " .. rank)
    print(" - lambda = " .. lambda)
    print("-----------------------------------------")
@@ -231,6 +232,52 @@ return alsU, alsV, alsLoss, rank, lambda
 end
 
 
+
+
+
+----------------------------------------------------------------------
+-- parse command-line options
+--
+local arg = {}
+cmd = torch.CmdLine()
+cmd:text()
+cmd:text('Learn SDAE network for collaborative filtering')
+cmd:text()
+cmd:text('Options')
+-- general options:
+cmd:option('-fileType'    , "movieLens"                        , 'The data file format (jester/movieLens/classic)')
+cmd:option('-file'        , '../data/movieLens/ratings-1M.dat' , 'The relative path to your data file')
+cmd:option('-ratio'       , 0.9                                , 'The training ratio')
+cmd:option('-rank'        , 15                                 , 'Rank of the final matrix')
+cmd:option('-lambda'      , 0.05                               , 'Regularisation')
+cmd:option('-seed'        , 1234                               , 'The seed')
+cmd:option('-out '        , '../out.csv'                       , 'The path to store the final matrix (csv) ')
+cmd:text()
+
+
+
+local params = cmd:parse(arg)
+
+
+torch.manualSeed(params.seed)
+math.randomseed(params.seed)
+
+
+--Load data
+local train, test = LoadData(
+   {
+      type  = params.fileType,
+      ratio = params.ratio,
+      file  = params.file,
+   })
+   
+local U, V = pickBestAls(train, test, {params.rank}, {params.lambda})
+
+
+print("Saving Matrix...")
+tensorToCsv(U*V:t(), params.out)
+print("done!")
+   
 
 
 
