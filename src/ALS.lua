@@ -249,9 +249,9 @@ cmd:option('-fileType'    , "movieLens"                        , 'The data file 
 cmd:option('-file'        , '../data/movieLens/ratings-1M.dat' , 'The relative path to your data file')
 cmd:option('-ratio'       , 0.9                                , 'The training ratio')
 cmd:option('-rank'        , 15                                 , 'Rank of the final matrix')
-cmd:option('-lambda'      , 0.05                               , 'Regularisation')
+cmd:option('-lambda'      , 0.03                               , 'Regularisation')
 cmd:option('-seed'        , 1234                               , 'The seed')
-cmd:option('-out '        , '../out.csv'                       , 'The path to store the final matrix (csv) ')
+cmd:option('-out'        , '../out.csv'                       , 'The path to store the final matrix (csv) ')
 cmd:text()
 
 
