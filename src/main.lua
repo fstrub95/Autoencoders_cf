@@ -39,6 +39,12 @@ cmd:text()
 
 local params = cmd:parse(arg)
 
+print("Options: ")
+for key, val in pairs(params) do
+   print(" - " .. key  .. "  \t : " .. val)
+end
+
+
 
 torch.manualSeed(params.seed)
 math.randomseed(params.seed)

@@ -209,7 +209,6 @@ end
 ----------------------------------------------------------------------
 -- parse command-line options
 --
-local arg = {}
 cmd = torch.CmdLine()
 cmd:text()
 cmd:text('Learn SDAE network for collaborative filtering')
@@ -220,15 +219,20 @@ cmd:option('-fileType'    , "movieLens"                        , 'The data file 
 cmd:option('-file'        , '../data/movieLens/ratings-1M.dat' , 'The relative path to your data file')
 cmd:option('-ratio'       , 0.9                                , 'The training ratio')
 cmd:option('-rank'        , 15                                 , 'Rank of the final matrix')
-cmd:option('-lambda'      , 0.05                               , 'Regularisation')
+cmd:option('-lambda'      , 0.02                               , 'Regularisation')
 cmd:option('-lrt'         , 0.02                               , 'Learning rate')
 cmd:option('-seed'        , 1234                               , 'The seed')
-cmd:option('-out '        , '../out.csv'                       , 'The path to store the final matrix (csv) ')
+cmd:option('-out'         , '../out.csv'                       , 'The path to store the final matrix (csv) ')
 cmd:text()
 
 
 
 local params = cmd:parse(arg)
+
+print("Options: ")
+for key, val in pairs(params) do
+   print(" - " .. key  .. "  \t : " .. val)
+end
 
 
 torch.manualSeed(params.seed)

@@ -58,6 +58,7 @@ function tensorToCsv(M, outFile)
    io.output(ouputTrain)
    for i = 1, M:size(1) do
       xlua.progress(i, M:size(1))
+      local line = ""
       for j = 1, M:size(2) do
          line = line .. M[i][j] .. " " 
       end
