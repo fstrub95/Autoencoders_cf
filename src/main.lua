@@ -20,7 +20,6 @@ dofile("LearnU.lua")
 ----------------------------------------------------------------------
 -- parse command-line options
 --
-local arg = {}
 cmd = torch.CmdLine()
 cmd:text()
 cmd:text('Learn SDAE network for collaborative filtering')

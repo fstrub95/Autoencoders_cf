@@ -4,29 +4,6 @@ require("torch")
 dofile ("tools.lua")
 
 
---poor memory management -> (useless) pre-allocate meomory and resize it 
-local function cat(X, i, j, t)
-
-   local buffer = torch.Tensor(1,2)
-   buffer[1][1] = j
-   buffer[1][2] = t
-
-   if X.data[i] == nil then 
-      X.data[i] = buffer 
-   else             
-      X.data[i] = X.data[i]:cat(buffer, 1) 
-   end
-end   
-
-local function computeBias(X,gMean)
-   for k, x in pairs(X.data) do
-      X.info[k] = X.info[k] or {}
-      X.info[k].mean  = x[{{},2}]:mean()
-      X.info[k].std   = x[{{},2}]:std()
-      X.info[k].gMean = gMean
-   end
-end
-
 local function computeTestAndTrain(userRating, ratioTraining)
 
    local train = {U = { data = {}, info = {} }, V = { data = {}, info = {}}}
@@ -54,27 +31,52 @@ local function computeTestAndTrain(userRating, ratioTraining)
    
          --store the rating in either the training or testing set
          if math.random() < ratioTraining then
-            cat(train.U, userId, itemId, rating)
-            cat(train.V, itemId, userId, rating)
-   
+         
+            if train.U.data[userId] == nil then train.U.data[userId] = DynamicSparseTensor.new(200) end
+            if train.V.data[itemId] == nil then train.V.data[itemId] = DynamicSparseTensor.new(200) end 
+            
+            train.U.data[userId]:append(torch.Tensor{itemId,rating})
+            train.V.data[itemId]:append(torch.Tensor{userId,rating})
+            
             n    = n + 1
             mean = (n*mean + rating) / ( n + 1 )
    
          else
-            cat(test.U, userId, itemId, rating)
-            cat(test.V, itemId, userId, rating)
+            if test.U.data[userId] == nil then test.U.data[userId] = DynamicSparseTensor.new(200) end
+            if test.V.data[itemId] == nil then test.V.data[itemId] = DynamicSparseTensor.new(200) end 
+            
+            test.U.data[userId]:append(torch.Tensor{itemId,rating})
+            test.V.data[itemId]:append(torch.Tensor{userId,rating})
          end
       end
    end
 
 
    -- sort sparse vectors (This is required)
-   local function sort(X) for k, x in pairs(X.data) do X.data[k] = sortSparse(x) end end
-   sort(train.U)
-   sort(train.V)
-   sort(test.U)
-   sort(test.V)
+   local function build(X) 
+      for k, x in pairs(X.data) do 
+         X.data[k] = x:build():ssortByIndex() 
+      end 
+   end
+   
+   build(train.U)
+   build(train.V)
+   build(test.U)
+   build(test.V)
 
+
+   --store mean, globalMean and std for every row/column
+   local function computeBias(X,gMean)
+      for k, x in pairs(X.data) do
+         X.info[k] = X.info[k] or {}
+         X.info[k].mean  = x[{{},2}]:mean()
+         X.info[k].std   = x[{{},2}]:std()
+         X.info[k].gMean = gMean
+      end
+   end
+   
+   computeBias(train.U,mean)
+   computeBias(train.V,mean)
 
    --Provide external information
    train.U.size, test.U.size = Usize, Usize
@@ -83,11 +85,7 @@ local function computeTestAndTrain(userRating, ratioTraining)
    train.U.dimension, test.U.dimension = Vsize, Vsize
    train.V.dimension, test.V.dimension = Usize, Usize
    
-   
-   --store mean, globalMean and std for every row/column
-   computeBias(train.U,mean)
-   computeBias(train.V,mean)
-   
+  
    print(Usize .. " users were loaded.")
    print(Vsize .. " items were loaded.")
 
@@ -205,9 +203,9 @@ function LoadData(conf)
 
    if     conf.type == "movieLens" then
       return LoadRatings(conf.file, conf.ratio, '(%d+)::(%d+)::(%d+)::(%d+)')
-   elseif conf.file == "jester" then
+   elseif conf.type == "jester" then
       return LoadJester(conf.file, conf.ratio)
-   elseif conf.file == "classic" then
+   elseif conf.type == "classic" then
       return LoadRatings(conf.file, conf.ratio, '(%d+) (%d+) (%d+)')
    else
       error("Unknown data format, it must be :  movieLens / jester / none ")
