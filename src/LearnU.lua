@@ -32,7 +32,7 @@ local function trainNN(train, test, config, name)
          --ENCODERS
          encoders[i] = nn.Sequential()
          
-         if i == 1 then encoders[i]:add(nn.SparseLinearBatch(bottleneck[i-1], bottleneck[i], false))
+         if i == 1 then encoders[i]:add(nnsparse.SparseLinearBatch(bottleneck[i-1], bottleneck[i], false))
          else           encoders[i]:add(nn.Linear           (bottleneck[i-1], bottleneck[i])) end
          
          encoders[i]:add(nn.Tanh())

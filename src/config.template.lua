@@ -5,7 +5,7 @@ configV =
       isTied    = false,
       coefLayer = 10,
       { 
-         criterion = nn.SDAESparseCriterion(nn.MSECriterion(),
+         criterion = nnsparse.SDAESparseCriterion(nn.MSECriterion(),
          {
             alpha = 1,
             beta  = 1,
@@ -30,7 +30,7 @@ configV =
       plot      = false,
       coefLayer = 12,
       { 
-         criterion = nn.SDAECriterion(nn.MSECriterion(),
+         criterion = nnsparse.SDAECriterion(nn.MSECriterion(),
          {
             alpha = 1,
             beta  = 1,
@@ -49,7 +49,7 @@ configV =
       },
       
       {
-         criterion = nn.SDAESparseCriterion(nn.MSECriterion(),
+         criterion = nnsparse.SDAESparseCriterion(nn.MSECriterion(),
          {
             alpha = 1.2,
             beta  = 0.8,

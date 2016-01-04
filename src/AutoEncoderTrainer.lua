@@ -137,8 +137,8 @@ function  AutoEncoderTrainer:Test()
    
    if self.isSparse then
       -- compute prediction error
-      local rmseFct = nn.SparseCriterion(nn.MSECriterion())
-      local maeFct  = nn.SparseCriterion(nn.AbsCriterion())
+      local rmseFct = nnsparse.SparseCriterion(nn.MSECriterion())
+      local maeFct  = nnsparse.SparseCriterion(nn.AbsCriterion())
       
       -- compute the prediction
       local output = network:forward(train)  --WARNING indexing was lost while forwarding

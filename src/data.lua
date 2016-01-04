@@ -32,8 +32,8 @@ local function computeTestAndTrain(userRating, ratioTraining)
          --store the rating in either the training or testing set
          if math.random() < ratioTraining then
          
-            if train.U.data[userId] == nil then train.U.data[userId] = DynamicSparseTensor.new(200) end
-            if train.V.data[itemId] == nil then train.V.data[itemId] = DynamicSparseTensor.new(200) end 
+            if train.U.data[userId] == nil then train.U.data[userId] = nnsparse.DynamicSparseTensor(200) end
+            if train.V.data[itemId] == nil then train.V.data[itemId] = nnsparse.DynamicSparseTensor(200) end 
             
             train.U.data[userId]:append(torch.Tensor{itemId,rating})
             train.V.data[itemId]:append(torch.Tensor{userId,rating})
@@ -42,8 +42,8 @@ local function computeTestAndTrain(userRating, ratioTraining)
             mean = (n*mean + rating) / ( n + 1 )
    
          else
-            if test.U.data[userId] == nil then test.U.data[userId] = DynamicSparseTensor.new(200) end
-            if test.V.data[itemId] == nil then test.V.data[itemId] = DynamicSparseTensor.new(200) end 
+            if test.U.data[userId] == nil then test.U.data[userId] = nnsparse.DynamicSparseTensor(200) end
+            if test.V.data[itemId] == nil then test.V.data[itemId] = nnsparse.DynamicSparseTensor(200) end 
             
             test.U.data[userId]:append(torch.Tensor{itemId,rating})
             test.V.data[itemId]:append(torch.Tensor{userId,rating})
