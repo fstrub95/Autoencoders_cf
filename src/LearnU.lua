@@ -32,17 +32,25 @@ local function trainNN(train, test, config, name)
          --ENCODERS
          encoders[i] = nn.Sequential()
          
-         if i == 1 then encoders[i]:add(nn.SparseLinearBatch(bottleneck[i-1], bottleneck[i], false))
-         else           encoders[i]:add(nn.Linear           (bottleneck[i-1], bottleneck[i])) end
+         --TODO testU Densify vs SparseLinear
          
+         if i == 1  then 
+            if USE_GPU then
+               encoders[i]:add(nnsparse.Densify(bottleneck[i-1])) 
+               encoders[i]:add(nn.Linear(bottleneck[i-1], bottleneck[i]))
+            else
+               encoders[i]:add(nnsparse.SparseLinearBatch(bottleneck[i-1], bottleneck[i], false))
+            end               
+         else
+            encoders[i]:add(nn.Linear(bottleneck[i-1], bottleneck[i]))
+         end
+                  
          encoders[i]:add(nn.Tanh())
-         
          
          --DECODERS
          decoders[i] = nn.Sequential()
          decoders[i]:add(nn.Linear(bottleneck[i],bottleneck[i-1]))
          decoders[i]:add(nn.Tanh())
-         
          
          -- tied weights
          if confLayer.isTied == true then
@@ -68,10 +76,21 @@ local function trainNN(train, test, config, name)
          noLayer = noLayer + 1
          for k = noLayer, 1, -1 do 
 
+            --Retrieve configuration      
+            local step    = noLayer-k+1
+            local sgdConf = confLayer[step]
+            sgdConf.name = name .. "." .. key .. "-" .. step 
+
+
             -- Build intermediate networks
             local network = nn.Sequential()
             for i = k      , noLayer,  1 do network:add(encoders[i]) end 
             for i = noLayer, k      , -1 do network:add(decoders[i]) end
+
+            if USE_GPU then 
+                 network:cuda()
+                 sgdConf.criterion:cuda()
+            end
 
             network = FlatNetwork(network)
 
@@ -84,17 +103,12 @@ local function trainNN(train, test, config, name)
             local newtrain = train.data
             local newtest  = test.data
             for i = 1, k-1 do
-               newtrain = encoders[i]:forward(newtrain)
-               newtest  = encoders[i]:forward(newtest)
+               local batchifier = nnsparse.Batchifier(encoders[i], bottleneck[i])
+               newtrain = batchifier:forward(newtrain, 20)
+               newtest  = batchifier:forward(newtest, 20) 
             end
 
-
-            --Train network      
-            local step    = noLayer-k+1
-            local sgdConf = confLayer[step]
-            sgdConf.name = name .. "." .. key .. "-" .. step 
-
-            
+            --Train network
             print("Start training : " .. sgdConf.name)
             print(network)
 

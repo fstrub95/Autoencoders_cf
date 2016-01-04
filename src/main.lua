@@ -1,3 +1,4 @@
+
 -- Load global libraries
 require("nn")
 require("optim")
@@ -16,7 +17,6 @@ dofile("LearnU.lua")
 
 
 
-
 ----------------------------------------------------------------------
 -- parse command-line options
 --
@@ -29,11 +29,11 @@ cmd:text('Options')
 cmd:option('-file'        , '../data/movieLens/ratings-1M.dat' , 'The relative path to your data file')
 cmd:option('-conf'        , "config.template.lua"              , 'The relative path to the lua configuration file')
 cmd:option('-ratio'       , 0.9                                , 'The training ratio')
-cmd:option('-fileType'    , "movieLens"                        , 'The data file format (jester/movieLens/classic)')
+cmd:option('-fileType'    , "bidon"                        , 'The data file format (jester/movieLens/classic)')
 cmd:option('-seed'        , 1234                               , 'The seed')
+cmd:option('-gpu'         , true                               , 'use gpu')
 cmd:option('-out'         , '../out.csv'                       , 'The path to store the final matrix (csv) ')
 cmd:text()
-
 
 
 
@@ -41,9 +41,10 @@ local params = cmd:parse(arg)
 
 print("Options: ")
 for key, val in pairs(params) do
-   print(" - " .. key  .. "  \t : " .. val)
+   print(" - " .. key  .. "  \t : " .. tostring(val))
 end
 
+USE_GPU = params.gpu
 
 
 torch.manualSeed(params.seed)
@@ -88,32 +89,6 @@ elseif configV then
    _, estimate = trainV(train, test, configV)
 end
 
-
-
-print("Saving Matrix...")
-tensorToCsv(estimate, params.out)
-
 print("done!")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

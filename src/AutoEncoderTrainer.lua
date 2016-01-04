@@ -4,31 +4,22 @@ AutoEncoderTrainer = {}
 
 function AutoEncoderTrainer:new(network, conf, train, test, info, maxIndex)
 
-   newObj = 
+   newObj =
       {
          network  = network,
          loss     = conf.criterion,
          train    = train,
          test     = test,
+         info     = info,
          isSparse = network.isSparse or false,
-         maxIndex  = maxIndex,
+         maxIndex = maxIndex,
          rmse     = {},
          mae      = {},
       }
 
-   -- this pre-compute the postprocessing offset
-   if network.isSparse then
-      local mean = torch.zeros(maxIndex,1)
-      for k, oneInfo in pairs(info) do
-         oneInfo.mean = oneInfo.mean or 0
-         mean[k] = oneInfo.mean
-   end
-      newObj.mean = mean
-   end
-
    self.__index = self
 
-   return setmetatable(newObj, self)   
+   return setmetatable(newObj, self)
 
 end
 
@@ -38,19 +29,19 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
 
    -- pick alias
    local network = self.network
-   local lossFct = self.loss  
+   local lossFct = self.loss
    local inputs  = self.train
 
    -- Retrieve parameters and gradients
    local w, dw = network:getParameters()
-   
+
    -- remove Torch size average, aka 1/n, for loss)
    lossFct.sizeAverage = false
 
    -- bufferize minibatch
    local input
    if network.isSparse then input = {}
-   else                     input = torch.Tensor(sgdOpt.miniBatchSize, inputs[1]:size(1)) 
+   else                     input = inputs[1].new(sgdOpt.miniBatchSize, inputs[1]:size(1))
    end
 
 
@@ -58,16 +49,16 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
    local noSample = GetSize(inputs)
    local shuffle  = torch.randperm(noSample)
 
- 
+
    -- Start training
    network:training()
-   
-   
+
+
    local cursor   = 1
    while cursor < noSample-1 do
 
       -- prepare minibatch)
-      local noPicked = 1 
+      local noPicked = 1
       while noPicked <= sgdOpt.miniBatchSize and cursor < noSample-1 do
 
          local shuffledIndex = shuffle[cursor]
@@ -93,18 +84,17 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
          -- set the auto-encoder target
          local target = input
 
-         -- prepare SDAE mask 
+         -- prepare SDAE mask
          input = lossFct:prepareInput(input)
 
-
-          --- FORWARD
+         --- FORWARD
          local output = network:forward(input)
          local loss   = lossFct:forward(output, target)
-
 
          --- BACKWARD
          local dloss = lossFct:backward(output, target)
          local _     = network:backward(input, dloss)
+
 
          -- Return loss and gradients
          return loss/sgdOpt.miniBatchSize, dw:div(sgdOpt.miniBatchSize)
@@ -115,13 +105,13 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
       optim.sgd (feval, w, sgdOpt )
 
    end
-   
-   
+
+
 end
 
 
 
-function  AutoEncoderTrainer:Test()
+function  AutoEncoderTrainer:Test(sgdOpt)
 
    local network = self.network
 
@@ -130,36 +120,86 @@ function  AutoEncoderTrainer:Test()
 
    local loss, rmse, mae = NaN,NaN,NaN
 
-  
+
    -- start evaluating
    network:evaluate()
-   
-   
+
+
    if self.isSparse then
-      -- compute prediction error
-      local rmseFct = nn.SparseCriterion(nn.MSECriterion())
-      local maeFct  = nn.SparseCriterion(nn.AbsCriterion())
-      
-      -- compute the prediction
-      local output = network:forward(train)  --WARNING indexing was lost while forwarding
-      
-      -- re-index the data
-      local outputFull = torch.Tensor(self.maxIndex, output:size(2)):fill(NaN)
-      local ouputIndex = 0 
-      for realIndex, _ in pairs(train) do
-          ouputIndex = ouputIndex + 1
-          outputFull[realIndex] = output[ouputIndex]
+
+      -- Configure prediction error
+      local rmseFct = nnsparse.SparseCriterion(nn.MSECriterion())
+      local maeFct  = nnsparse.SparseCriterion(nn.AbsCriterion())
+
+      rmseFct.sizeAverage = false
+      maeFct.sizeAverage  = false
+
+      rmse, mae = 0, 0
+
+      --Prepare minibatch
+      local inputs  = {}
+      local targets = {}
+
+      local i = 1
+      local noSample = 0
+
+      for k, input in pairs(train) do
+
+         -- Focus on the prediction aspect
+         local target = test[k]
+
+         -- Ignore data with no testing examples
+         if target ~= nil then
+
+            inputs[i]  = input
+
+            targets[i] = targets[i] or target.new()
+            targets[i]:resizeAs(target):copy(target)
+
+            -- center the target values
+            targets[i][{{}, 2}]:add(-self.info[k].mean)
+
+            noSample = noSample + target:size(1)
+            i = i + 1
+
+            --compute loss when minibatch is ready
+            if #inputs == sgdOpt.miniBatchSize then
+
+               local output = network:forward(inputs)
+
+               rmse = rmse + rmseFct:forward(output, targets)
+               mae  = mae  + maeFct:forward(output, targets)
+
+               --reset minibatch
+               inputs  = {}
+               i = 1
+
+            end
+         end
       end
-      
-      outputFull:add(self.mean:expandAs(outputFull))   --recenter data
-      outputFull[outputFull:eq(NaN)] = 0               --estimates with no training example are replaced with 0
-      
-      rmse = rmseFct:forward(outputFull, test)
-      mae  = maeFct:forward(outputFull, test)
-      
+
+      -- remaining data for minibatch
+      if #inputs > 0 then
+         local _targets = {unpack(targets, 1, #inputs)} --retrieve a subset of targets
+
+         local output = network:forward(inputs)
+
+         rmse = rmse + rmseFct:forward(output, _targets)
+         mae  = mae  + maeFct:forward(output , _targets)
+      end
+
+      rmse = rmse/noSample
+      mae  = mae/noSample
+
+      local w, dw = network:getParameters()
+
+
+      --print("FULL : " .. math.sqrt(rmseFct:forward(network:forward(self.train), self.test))*2)
+
    else
-      -- compute reconstruction loss 
-      local lossFct = nn.MSECriterion() 
+      -- compute reconstruction loss
+      local lossFct = nn.MSECriterion()
+
       local outputLoss = network:forward(test)
       loss = lossFct:forward(outputLoss, test)
    end
@@ -182,8 +222,8 @@ function AutoEncoderTrainer:Execute(sgdOpt)
 
       --train one epoch
       self:Train(sgdOpt, t)
-      
-      local newReconstructionRMSE, newPredictionRMSE, newMAE = self:Test()
+
+      local newReconstructionRMSE, newPredictionRMSE, newMAE = self:Test(sgdOpt)
 
       --resclase RMSE/MAE
       newPredictionRMSE     = newPredictionRMSE     * 2
@@ -196,13 +236,13 @@ function AutoEncoderTrainer:Execute(sgdOpt)
       if newPredictionRMSE ~= NaN and newMAE ~= NaN then
          print(t .. "/" .. noEpoch .. "\t RMSE : "  .. newPredictionRMSE .. "\t MAE : "  .. newMAE )
       end
-      
+
       if newReconstructionRMSE ~= NaN  then
          print(t .. "/" .. noEpoch .. "\t RMSE : "  .. newReconstructionRMSE )
       end
 
    end
-   
+
    return self.rmse, self.mae
 
 end

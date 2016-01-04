@@ -1,8 +1,10 @@
+
 require("sys")
 require("torch")
 
 dofile ("tools.lua")
 
+require("nnsparse")
 
 local function computeTestAndTrain(userRating, ratioTraining)
 
@@ -32,8 +34,8 @@ local function computeTestAndTrain(userRating, ratioTraining)
          --store the rating in either the training or testing set
          if math.random() < ratioTraining then
          
-            if train.U.data[userId] == nil then train.U.data[userId] = DynamicSparseTensor.new(200) end
-            if train.V.data[itemId] == nil then train.V.data[itemId] = DynamicSparseTensor.new(200) end 
+            if train.U.data[userId] == nil then train.U.data[userId] = nnsparse.DynamicSparseTensor(200) end
+            if train.V.data[itemId] == nil then train.V.data[itemId] = nnsparse.DynamicSparseTensor(200) end 
             
             train.U.data[userId]:append(torch.Tensor{itemId,rating})
             train.V.data[itemId]:append(torch.Tensor{userId,rating})
@@ -42,8 +44,8 @@ local function computeTestAndTrain(userRating, ratioTraining)
             mean = (n*mean + rating) / ( n + 1 )
    
          else
-            if test.U.data[userId] == nil then test.U.data[userId] = DynamicSparseTensor.new(200) end
-            if test.V.data[itemId] == nil then test.V.data[itemId] = DynamicSparseTensor.new(200) end 
+            if test.U.data[userId] == nil then test.U.data[userId] = nnsparse.DynamicSparseTensor.new(200) end
+            if test.V.data[itemId] == nil then test.V.data[itemId] = nnsparse.DynamicSparseTensor.new(200) end 
             
             test.U.data[userId]:append(torch.Tensor{itemId,rating})
             test.V.data[itemId]:append(torch.Tensor{userId,rating})
@@ -55,7 +57,8 @@ local function computeTestAndTrain(userRating, ratioTraining)
    -- sort sparse vectors (This is required)
    local function build(X) 
       for k, x in pairs(X.data) do 
-         X.data[k] = x:build():ssortByIndex() 
+         X.data[k] = torch.Tensor.ssortByIndex(x:build())
+         if USE_GPU then X.data[k] = X.data[k]:cuda() end 
       end 
    end
    
@@ -141,6 +144,57 @@ end
 
 
 
+local function LoadBidon(file, ratio)
+
+
+   local data = torch.Tensor(200,100):uniform(-1,1):apply(function(x) if torch.uniform() < 0.6 then return 0 else return x end end)
+
+   function preprocess(x)  return (x) end
+   function postprocess(x) return (x) end
+
+
+   -- Step 1 : Retrieve rating by jokes
+   print("Step 1 : Retrieve rating by jokes...")
+
+   local userRating = {}
+
+   for i = 1, data:size(1) do
+      for j = 1, data:size(2) do
+
+         local t = data[i][j]
+
+         if t ~= 0 then
+
+            local userId = i
+            local itemId = j
+
+            local rating =  preprocess(t)
+
+            if userRating[userId] == nil then 
+               userRating[userId] = {} 
+            end
+
+            table.insert(userRating[userId], 
+                {
+                  itemId = itemId, 
+                  rating = rating
+               })
+
+         end  
+      end
+   end
+
+
+
+
+   -- Step 2 : Separate training set and testing set in sparse matrix
+   print("Step 2 : Separate training set and testing set in sparse matrix...")
+   local train, test = computeTestAndTrain(userRating, ratio)
+
+   return train, test
+
+end
+
 
 local function LoadJester(file, ratio)
 
@@ -207,6 +261,8 @@ function LoadData(conf)
       return LoadJester(conf.file, conf.ratio)
    elseif conf.type == "classic" then
       return LoadRatings(conf.file, conf.ratio, '(%d+) (%d+) (%d+)')
+   elseif conf.type == "bidon" then
+      return LoadBidon(conf.file, conf.ratio, '(%d+) (%d+) (%d+)')
    else
       error("Unknown data format, it must be :  movieLens / jester / none ")
    end

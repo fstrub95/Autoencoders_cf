@@ -5,7 +5,7 @@ configV =
       isTied    = false,
       coefLayer = 10,
       { 
-         criterion = nn.SDAESparseCriterion(nn.MSECriterion(),
+         criterion = nnsparse.SDAESparseCriterion(nn.MSECriterion(),
          {
             alpha = 1,
             beta  = 1,
@@ -15,11 +15,11 @@ configV =
             hideRatio = 0.15,
          }), 
          noEpoch = 15, 
-         miniBatchSize = 20,
+         miniBatchSize = 13,
          learningRate = 0.03,  
          learningRateDecay = 0.1,
          weightDecay = 0.03,
-         momentum = 0.8,
+--         momentum = 0.2 ,
       },
       
    },
@@ -30,7 +30,7 @@ configV =
       plot      = false,
       coefLayer = 12,
       { 
-         criterion = nn.SDAECriterion(nn.MSECriterion(),
+         criterion = nnsparse.SDAECriterion(nn.MSECriterion(),
          {
             alpha = 1,
             beta  = 1,
@@ -41,7 +41,7 @@ configV =
             hideRatio = 0,
          }),
          noEpoch = 40, 
-         miniBatchSize = 2,
+         miniBatchSize = 5,
          learningRate  = 1e-5,  
          learningRateDecay = 0.1,
          weightDecay = 0.2,
@@ -49,7 +49,7 @@ configV =
       },
       
       {
-         criterion = nn.SDAESparseCriterion(nn.MSECriterion(),
+         criterion = nnsparse.SDAESparseCriterion(nn.MSECriterion(),
          {
             alpha = 1.2,
             beta  = 0.8,
@@ -63,7 +63,7 @@ configV =
          learningRate  = 0.003,
          learningRateDecay = 0.2,
          weightDecay = 0.03,
-         momentum = 0.8,
+--         momentum = 0.8,
          
       },
       

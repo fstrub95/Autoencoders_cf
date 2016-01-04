@@ -3,7 +3,6 @@ require("torch")
 
 dofile ("tools.lua")
 
-require("nnsparse")
 
 
 
