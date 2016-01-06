@@ -53,6 +53,9 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
    -- Start training
    network:training()
 
+   if USE_GPU == true then
+      densifier  = nnsparse.Densify(6040):cuda()
+   end
 
    local cursor   = 1
    while cursor < noSample-1 do
@@ -81,19 +84,21 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
          -- Reset gradients and losses
          network:zeroGradParameters()
 
-         -- set the auto-encoder target
          local target = input
+         if self.isSparse then  
+            target = densifier:forward(input)
+         end         
+      
+         local noisyInput = lossFct:prepareInput(input) 
+         
 
-         -- prepare SDAE mask
-         input = lossFct:prepareInput(input)
 
          --- FORWARD
-         local output = network:forward(input)
+         local output = network:forward(noisyInput)
          local loss   = lossFct:forward(output, target)
-
          --- BACKWARD
          local dloss = lossFct:backward(output, target)
-         local _     = network:backward(input, dloss)
+         local _     = network:backward(noisyInput, dloss)
 
 
          -- Return loss and gradients
@@ -165,7 +170,9 @@ function  AutoEncoderTrainer:Test(sgdOpt)
             --compute loss when minibatch is ready
             if #inputs == sgdOpt.miniBatchSize then
 
-               local output = network:forward(inputs)
+               local denseInputs  = densifier:forward(inputs)
+
+               local output       = network:forward(denseInputs)
 
                rmse = rmse + rmseFct:forward(output, targets)
                mae  = mae  + maeFct:forward(output, targets)
@@ -182,11 +189,12 @@ function  AutoEncoderTrainer:Test(sgdOpt)
       if #inputs > 0 then
          local _targets = {unpack(targets, 1, #inputs)} --retrieve a subset of targets
 
-         local output = network:forward(inputs)
+         local denseInputs = densifier:forward(inputs)
+         local output = network:forward(denseInputs)
 
          rmse = rmse + rmseFct:forward(output, _targets)
          mae  = mae  + maeFct:forward(output , _targets)
-      end
+     end
 
       rmse = rmse/noSample
       mae  = mae/noSample

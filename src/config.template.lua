@@ -1,3 +1,5 @@
+dofile("SDAECriterionGPU.lua")
+
 configV = 
 {
    layer1 = 
@@ -5,21 +7,22 @@ configV =
       isTied    = false,
       coefLayer = 10,
       { 
-         criterion = nnsparse.SDAESparseCriterion(nn.MSECriterion(),
+         criterion = nnsparse.SDAECriterionGPU(nn.MSECriterion(),6040,
          {
             alpha = 1,
             beta  = 1,
             noiseRatio = 0,
             flipRatio = 0.05,
             flipRange = torch.Tensor{-1, 1},
-            hideRatio = 0.15,
+            hideRatio = 0.20,
          }), 
-         noEpoch = 15, 
-         miniBatchSize = 13,
+         --criterion = nn.MSECriterion(),
+         noEpoch = 1, 
+         miniBatchSize = 20,
          learningRate = 0.03,  
          learningRateDecay = 0.1,
          weightDecay = 0.03,
---         momentum = 0.2 ,
+--         momentum = 0.8 ,
       },
       
    },

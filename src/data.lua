@@ -58,7 +58,9 @@ local function computeTestAndTrain(userRating, ratioTraining)
    local function build(X) 
       for k, x in pairs(X.data) do 
          X.data[k] = torch.Tensor.ssortByIndex(x:build())
-         if USE_GPU then X.data[k] = X.data[k]:cuda() end 
+          if USE_GPU then 
+            X.data[k] = X.data[k]:cuda()
+          end 
       end 
    end
    

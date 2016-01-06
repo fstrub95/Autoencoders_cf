@@ -29,7 +29,7 @@ cmd:text('Options')
 cmd:option('-file'        , '../data/movieLens/ratings-1M.dat' , 'The relative path to your data file')
 cmd:option('-conf'        , "config.template.lua"              , 'The relative path to the lua configuration file')
 cmd:option('-ratio'       , 0.9                                , 'The training ratio')
-cmd:option('-fileType'    , "bidon"                        , 'The data file format (jester/movieLens/classic)')
+cmd:option('-fileType'    , "movieLens"                        , 'The data file format (jester/movieLens/classic)')
 cmd:option('-seed'        , 1234                               , 'The seed')
 cmd:option('-gpu'         , true                               , 'use gpu')
 cmd:option('-out'         , '../out.csv'                       , 'The path to store the final matrix (csv) ')
@@ -45,7 +45,9 @@ for key, val in pairs(params) do
 end
 
 USE_GPU = params.gpu
-
+if USE_GPU then
+  require("cunn")
+end
 
 torch.manualSeed(params.seed)
 math.randomseed(params.seed)
