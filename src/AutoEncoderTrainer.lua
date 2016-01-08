@@ -59,16 +59,10 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
    -- Start training
    network:training()
 
-   if USE_GPU == true then
-      local inputSize = network:get(network:size()-1).bias:size(1)
-      print(inputSize)
-      densifier  = nnsparse.Densify(inputSize):cuda()
-   end
-
    local cursor   = 1
    while cursor < noSample-1 do
 
-      -- prepare minibatch)
+      -- prepare minibatch
       local noPicked = 1
       while noPicked <= sgdOpt.miniBatchSize and cursor < noSample-1 do
 
@@ -82,7 +76,6 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
       end
 
 
-
       -- Define the closure to evalute w and dw
       local function feval(x)
 
@@ -92,14 +85,12 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
          -- Reset gradients and losses
          network:zeroGradParameters()
 
+         -- AutoEncoder targets
          local target = input
-         if self.isSparse then  
-            target = densifier:forward(input)
-         end         
       
+         -- Compute noisy input for Denoising AutoEnc 
          local noisyInput = lossFct:prepareInput(input) 
          
-
          --- FORWARD
          local output = network:forward(noisyInput)
          local loss   = lossFct:forward(output, target)
@@ -107,10 +98,10 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
          local dloss = lossFct:backward(output, target)
          local _     = network:backward(noisyInput, dloss)
 
-
          -- Return loss and gradients
          return loss/sgdOpt.miniBatchSize, dw:div(sgdOpt.miniBatchSize)
       end
+
 
       -- Optimize current iteration
       sgdOpt.evalCounter = epoch

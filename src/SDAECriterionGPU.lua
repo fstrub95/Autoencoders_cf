@@ -8,6 +8,7 @@ function SDAECriterionGPU:__init(criterion, inputSize, SDAEconf)
    self.alpha = SDAEconf.alpha or 1   
    self.beta  = SDAEconf.beta  or 0
 
+   self.densifier = nnsparse.Densify(inputSize)
    self.inputDim = inputSize
    self.output = {}
  
@@ -84,7 +85,8 @@ end
 
 function SDAECriterionGPU:updateGradInput(estimate, target)
 
-   local dloss = self.criterion:updateGradInput(estimate , target)
+   local denseTarget = self.densifier:forward(target)
+   local dloss = self.criterion:updateGradInput(estimate , denseTarget)
    dloss:cmul(self.mask)
 
    if self.sizeAverage == true then
