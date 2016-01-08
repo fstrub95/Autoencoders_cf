@@ -36,7 +36,7 @@ local function trainNN(train, test, config, name)
          
          if i == 1  then 
             if USE_GPU then
---               encoders[i]:add(nnsparse.Densify(bottleneck[i-1])) 
+               encoders[i]:add(nnsparse.Densify(bottleneck[i-1])) 
                encoders[i]:add(nn.Linear(bottleneck[i-1], bottleneck[i]))
             else
                encoders[i]:add(nnsparse.SparseLinearBatch(bottleneck[i-1], bottleneck[i], false))

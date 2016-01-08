@@ -21,10 +21,11 @@ function SDAECriterionGPU:prepareInput(inputs)
 
    assert(torch.type(inputs) == "table")
    
-   self.output     = self.inputs or inputs[1].new()
+   --self.output     = self.inputs or inputs[1].new()
+   self.output = {}
    self.mask       = self.inputs or inputs[1].new()
    
-   self.output:resize(#inputs, self.inputDim):zero()
+   --self.output:resize(#inputs, self.inputDim):zero()
    self.mask:resize(#inputs, self.inputDim):zero()
 
    self.bufRand   = self.bufRand  or inputs[1].new()
@@ -42,17 +43,37 @@ function SDAECriterionGPU:prepareInput(inputs)
       local alphaIndex = index[alphaMask]
       local betaIndex  = index[betaMask]
 
-      if betaIndex:nDimension() > 0 then
-         self.output[k]:indexCopy(1, betaIndex,  data[betaMask])
-         self.mask[k]:indexFill(1, betaIndex , self.beta)
+      if torch.type(index) ~= "torch.CudaTensor" then
+         alphaIndex = alphaIndex:long()
+         betaIndex  = betaIndex:long()
       end
 
+      --if there is no input : reverse alphaMask/betaMask
+      if betaIndex:nDimension() == 0 then
+         local swapBuf = alphaIndex
+         alphaIndex = betaIndex
+         betaIndex  = swapBuf
+
+         swapBuf   = alphaMask
+	 alphaMask = betaMask
+         betaMask  = swapBuf
+      end
+
+       self.output[k] = oneInput:clone()
+       self.output[k][{{},2}][betaMask] = 0 
+
+--if betaIndex:nDimension() > 0 then
+      self.mask[k]:indexFill(1, betaIndex , self.beta)
+--      self.output[k]:indexCopy(1, betaIndex,  data[betaMask])
+--else
+--print("Weirdo!!!")
+--end
       if alphaIndex:nDimension() > 0 then
         self.mask[k]:indexFill(1, alphaIndex, self.alpha)
       end
       
    end   
-   
+
    return self.output
 
 end

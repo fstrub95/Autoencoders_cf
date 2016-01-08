@@ -1,10 +1,10 @@
-
+dofile("Tikhonov.lua")
 AutoEncoderTrainer = {}
 
 
 function AutoEncoderTrainer:new(network, conf, train, test, info, maxIndex)
 
-   newObj =
+   local newObj =
       {
          network  = network,
          loss     = conf.criterion,
@@ -16,6 +16,12 @@ function AutoEncoderTrainer:new(network, conf, train, test, info, maxIndex)
          rmse     = {},
          mae      = {},
       }
+
+--   if network.isSparse then
+--      newObj.tikhonov = nnsparse.Tikhonov(conf.weightDecay, newObj.network)
+--      conf.weightDecay = 0
+--      conf.weightDecays = newObj.tikhonov.lambdas
+--   end
 
    self.__index = self
 
@@ -54,7 +60,9 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
    network:training()
 
    if USE_GPU == true then
-      densifier  = nnsparse.Densify(6040):cuda()
+      local inputSize = network:get(network:size()-1).bias:size(1)
+      print(inputSize)
+      densifier  = nnsparse.Densify(inputSize):cuda()
    end
 
    local cursor   = 1
@@ -92,7 +100,6 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
          local noisyInput = lossFct:prepareInput(input) 
          
 
-
          --- FORWARD
          local output = network:forward(noisyInput)
          local loss   = lossFct:forward(output, target)
@@ -107,6 +114,12 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
 
       -- Optimize current iteration
       sgdOpt.evalCounter = epoch
+
+      -- compute new regularization according input/output 
+      if self.tikhonov then
+         self.tikhonov:computeLambda(input)
+      end
+
       optim.sgd (feval, w, sgdOpt )
 
    end
@@ -170,12 +183,17 @@ function  AutoEncoderTrainer:Test(sgdOpt)
             --compute loss when minibatch is ready
             if #inputs == sgdOpt.miniBatchSize then
 
-               local denseInputs  = densifier:forward(inputs)
+	      
 
+               local denseInputs  = densifier:forward(inputs)
                local output       = network:forward(denseInputs)
+               print(inputs)
+               print(denseInputs)
+               print(output)
+               print(targets)
 
                rmse = rmse + rmseFct:forward(output, targets)
-               mae  = mae  + maeFct:forward(output, targets)
+               --mae  = mae  + maeFct:forward(output, targets)
 
                --reset minibatch
                inputs  = {}
@@ -189,11 +207,12 @@ function  AutoEncoderTrainer:Test(sgdOpt)
       if #inputs > 0 then
          local _targets = {unpack(targets, 1, #inputs)} --retrieve a subset of targets
 
-         local denseInputs = densifier:forward(inputs)
+         local denseInputs  = densifier:forward(inputs)
+
          local output = network:forward(denseInputs)
 
          rmse = rmse + rmseFct:forward(output, _targets)
-         mae  = mae  + maeFct:forward(output , _targets)
+         --mae  = mae  + maeFct:forward(output , _targets)
      end
 
       rmse = rmse/noSample
