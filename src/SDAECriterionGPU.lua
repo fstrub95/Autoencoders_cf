@@ -9,7 +9,8 @@ function SDAECriterionGPU:__init(criterion, inputSize, SDAEconf)
    self.beta  = SDAEconf.beta  or 0
 
    self.inputDim = inputSize
-
+   self.output = {}
+ 
    self.hideRatio = SDAEconf.hideRatio or 0
 
    self.criterion.sizeAverage = false
@@ -20,14 +21,12 @@ end
 function SDAECriterionGPU:prepareInput(inputs)
 
    assert(torch.type(inputs) == "table")
-   
-   --self.output     = self.inputs or inputs[1].new()
-   self.output = {}
-   self.mask       = self.inputs or inputs[1].new()
-   
-   --self.output:resize(#inputs, self.inputDim):zero()
-   self.mask:resize(#inputs, self.inputDim):zero()
+  
+   if #self.output ~=  #inputs then self.output = {} end
 
+   self.mask       = self.inputs or inputs[1].new()   
+   self.mask:resize(#inputs, self.inputDim):zero() 
+   
    self.bufRand   = self.bufRand  or inputs[1].new()
    
    for k, oneInput in pairs(inputs) do
@@ -59,17 +58,14 @@ function SDAECriterionGPU:prepareInput(inputs)
          betaMask  = swapBuf
       end
 
-       self.output[k] = oneInput:clone()
-       self.output[k][{{},2}][betaMask] = 0 
+       self.output[k] = self.output[k] or oneInput.new()
+       self.output[k]:resizeAs(oneInput):copy(oneInput)
 
---if betaIndex:nDimension() > 0 then
       self.mask[k]:indexFill(1, betaIndex , self.beta)
---      self.output[k]:indexCopy(1, betaIndex,  data[betaMask])
---else
---print("Weirdo!!!")
---end
+
       if alphaIndex:nDimension() > 0 then
-        self.mask[k]:indexFill(1, alphaIndex, self.alpha)
+         self.output[k][{{},2}][alphaMask] = 0
+         self.mask[k]:indexFill(1, alphaIndex, self.alpha)
       end
       
    end   

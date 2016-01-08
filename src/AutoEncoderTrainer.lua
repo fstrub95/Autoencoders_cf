@@ -183,14 +183,7 @@ function  AutoEncoderTrainer:Test(sgdOpt)
             --compute loss when minibatch is ready
             if #inputs == sgdOpt.miniBatchSize then
 
-	      
-
-               local denseInputs  = densifier:forward(inputs)
-               local output       = network:forward(denseInputs)
-               print(inputs)
-               print(denseInputs)
-               print(output)
-               print(targets)
+               local output       = network:forward(inputs)
 
                rmse = rmse + rmseFct:forward(output, targets)
                --mae  = mae  + maeFct:forward(output, targets)
@@ -207,9 +200,7 @@ function  AutoEncoderTrainer:Test(sgdOpt)
       if #inputs > 0 then
          local _targets = {unpack(targets, 1, #inputs)} --retrieve a subset of targets
 
-         local denseInputs  = densifier:forward(inputs)
-
-         local output = network:forward(denseInputs)
+         local output = network:forward(inputs)
 
          rmse = rmse + rmseFct:forward(output, _targets)
          --mae  = mae  + maeFct:forward(output , _targets)
