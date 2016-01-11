@@ -6,68 +6,110 @@ dofile ("tools.lua")
 
 require("nnsparse")
 
-local function computeTestAndTrain(userRating, ratioTraining)
 
-   local train = {U = { data = {}, info = {} }, V = { data = {}, info = {}}}
-   local test  = {U = { data = {}, info = {} }, V = { data = {}, info = {}}} 
 
-   local mean = 0
-   local n    = 0
 
-   local Usize = 0
-   local Vsize = 0
+
+
+
+--This class has very poor design but it does the work. (And Lua is not helping to prototype nice class)
+--WARNING : NVI idiom (cf C+++)
+
+local DataLoader = torch.class('DataLoader')
+
+
+-- Public Interface to implement
+function DataLoader:LoadRatings(conf) end
+function DataLoader:LoadMetaU  (conf) end
+function DataLoader:LoadMetaV  (conf) end
+
+
+-- Public Interface to call
+function DataLoader:LoadData(ratioTraining, conf) 
+
+   -- First initlialize clean storage
+   self:__reset()
+
+   self.__ratioTraining = ratioTraining
+
+   print("Step 1 : Loading ratings...")
+   self:LoadRatings(conf)
+
+   print("Step 2 : PostProcessig ratings...")
+   self:__PostProcessRating()
+
+   --Load MetaData
+   print("Step 3 : Load user metadata...")   
+   self:LoadMetaU(conf)
+
+   print("Step 4 : Load item metadata...")
+   self:LoadMetaV(conf)
    
+   print("Done...")
 
-   for userId, ratings in pairs(userRating) do
+   return self.train, self.test
 
-      xlua.progress(userId, #userRating)
+end
 
-      for _, oneRating in pairs(ratings) do
 
-         local itemId = oneRating.itemId
-         local rating = oneRating.rating
-   
-         --store the matrix size by keeping the max Id
-         Usize = math.max(Usize, userId)
-         Vsize = math.max(Vsize, itemId)
-   
-         --store the rating in either the training or testing set
-         if math.random() < ratioTraining then
-         
-            if train.U.data[userId] == nil then train.U.data[userId] = nnsparse.DynamicSparseTensor(200) end
-            if train.V.data[itemId] == nil then train.V.data[itemId] = nnsparse.DynamicSparseTensor(200) end 
-            
-            train.U.data[userId]:append(torch.Tensor{itemId,rating})
-            train.V.data[itemId]:append(torch.Tensor{userId,rating})
-            
-            n    = n + 1
-            mean = (n*mean + rating) / ( n + 1 )
-   
-         else
-            if test.U.data[userId] == nil then test.U.data[userId] = nnsparse.DynamicSparseTensor.new(200) end
-            if test.V.data[itemId] == nil then test.V.data[itemId] = nnsparse.DynamicSparseTensor.new(200) end 
-            
-            test.U.data[userId]:append(torch.Tensor{itemId,rating})
-            test.V.data[itemId]:append(torch.Tensor{userId,rating})
-         end
-      end
+
+-- Protected Method (helper)
+function DataLoader:AppendOneRating(userId, itemId, rating)
+
+   --store the matrix size by keeping the max Id
+   self.__Usize = math.max(self.__Usize, userId)
+   self.__Vsize = math.max(self.__Vsize, itemId)
+
+
+   --store the rating in either the training or testing set
+   if math.random() < self.__ratioTraining then
+
+      if self.train.U.data[userId] == nil then self.train.U.data[userId] = nnsparse.DynamicSparseTensor(200) end
+      if self.train.V.data[itemId] == nil then self.train.V.data[itemId] = nnsparse.DynamicSparseTensor(200) end 
+
+      self.train.U.data[userId]:append(torch.Tensor{itemId,rating})
+      self.train.V.data[itemId]:append(torch.Tensor{userId,rating})
+
+      --update the training mean
+      self.__n    =  self.__n + 1
+      self.__mean = (self.__n*self.__mean + rating) / ( self.__n + 1 )
+
+   else
+      if self.test.U.data[userId] == nil then self.test.U.data[userId] = nnsparse.DynamicSparseTensor.new(200) end
+      if self.test.V.data[itemId] == nil then self.test.V.data[itemId] = nnsparse.DynamicSparseTensor.new(200) end 
+
+      self.test.U.data[userId]:append(torch.Tensor{itemId,rating})
+      self.test.V.data[itemId]:append(torch.Tensor{userId,rating})
    end
+   
+end
 
 
-   -- sort sparse vectors (This is required)
+--private method
+function DataLoader:__reset() 
+   self.train = {U = { data = {}, info = {} }, V = { data = {}, info = {}}}
+   self.test  = {U = { data = {}, info = {} }, V = { data = {}, info = {}}}
+   
+   self.__Usize = 0
+   self.__Vsize = 0
+   self.__mean  = 0
+   self.__n     = 0
+end
+
+
+function DataLoader:__PostProcessRating()
+
+   -- sort sparse vectors (This is required to make nn.SparseLinear works)
    local function build(X) 
       for k, x in pairs(X.data) do 
          X.data[k] = torch.Tensor.ssortByIndex(x:build())
-          if USE_GPU then 
-            X.data[k] = X.data[k]:cuda()
-          end 
       end 
    end
    
-   build(train.U)
-   build(train.V)
-   build(test.U)
-   build(test.V)
+   build(self.train.U)
+   build(self.train.V)
+   build(self.test.U)
+   build(self.test.V)
 
 
    --store mean, globalMean and std for every row/column
@@ -80,42 +122,41 @@ local function computeTestAndTrain(userRating, ratioTraining)
       end
    end
    
-   computeBias(train.U,mean)
-   computeBias(train.V,mean)
+   computeBias(self.train.U, self.__mean)
+   computeBias(self.train.V, self.__mean)
 
    --Provide external information
-   train.U.size, test.U.size = Usize, Usize
-   train.V.size, test.V.size = Vsize, Vsize
+   self.train.U.size, self.test.U.size = self.__Usize, self.__Usize
+   self.train.V.size, self.test.V.size = self.__Vsize, self.__Vsize
 
-   train.U.dimension, test.U.dimension = Vsize, Vsize
-   train.V.dimension, test.V.dimension = Usize, Usize
+   self.train.U.dimension, self.test.U.dimension = self.__Vsize, self.__Vsize
+   self.train.V.dimension, self.test.V.dimension = self.__Usize, self.__Usize
    
-  
-   print(Usize .. " users were loaded.")
-   print(Vsize .. " items were loaded.")
+   print(self.__Usize .. " users were loaded.")
+   print(self.__Vsize .. " items were loaded.")
 
-   return train, test
 end
 
 
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
 
+local movieLensLoader, parent = torch.class('movieLensLoader', 'DataLoader')
 
-
-local function LoadRatings(rates, ratio, regex)
+function movieLensLoader:LoadRatings(conf)
 
    --no pre-process/post-processing
    function preprocess(x)  return (x-3)/2 end
    function postprocess(x) return 2*x+3 end
 
-
    -- step 3 : load ratings
-   local ratesfile = io.open(rates, "r")
+   local ratesfile = io.open(conf.ratings, "r")
 
    -- Step 1 : Retrieve movies'scores...th
-   print("Step 1 : Retrieve movies'scores...")
-   local userRating = {}
+   local i = 0
    for line in ratesfile:lines() do
-      local userIdStr, movieIdStr, ratingStr = line:match(regex)
+
+      local userIdStr, movieIdStr, ratingStr = line:match('(%d+)::(%d+)::(%d%.?%d?)::(%d+)')
 
       local userId  = tonumber(userIdStr)
       local itemId  = tonumber(movieIdStr)
@@ -123,97 +164,111 @@ local function LoadRatings(rates, ratio, regex)
 
       rating = preprocess(rating)
 
-      if userRating[userId] == nil then 
-         userRating[userId] = {} 
-      end
+      self:AppendOneRating(userId, itemId, rating)
 
-      table.insert(userRating[userId], 
-         {
-            itemId = itemId, 
-            rating = rating
-         })
+      i = i + 1
+      
+      if math.fmod(i, 100000) == 0 then
+         print(i .. " ratings loaded...")
+      end
 
    end
    ratesfile:close()
-   
 
-   -- Step 2 : Separate training set and testing set in sparse matrix
-   print("Step 2 : Separate training set and testing set in sparse matrix...")
-   local train, test = computeTestAndTrain(userRating, ratio)
-
-   return train, test
 end
 
 
+function movieLensLoader:LoadMetaU(conf) 
 
-local function LoadBidon(file, ratio)
+   if #conf.metaUser > 0 then
 
+      local usersfile = io.open(conf.metaUser, "r")
 
-   local data = torch.Tensor(200,100):uniform(-1,1):apply(function(x) if torch.uniform() < 0.6 then return 0 else return x end end)
+      for line in usersfile:lines() do
 
-   function preprocess(x)  return (x) end
-   function postprocess(x) return (x) end
+         local userIdStr, sex, age, job, ZIP = line:match('(%d+)::(%a)::(%d+)::(%d+)::(%d+)')
+         --local userIdStr, age, sex, job, ZIP = line:match('(%d+)|(%d+)|(%a)|(%a+)|(.-)') --ignore code zip since it is ill formated
 
+         local userId = tonumber(userIdStr)
+           
+         local info = self.U.info[userId] or {}
+         
+         info.sex    = sexToBinary(sex)
+         info.age    = ageToBinary(age)
+         info.job    = jobToBinary(job)
+         
+         info.full   = torch.cat({info.sex, info.age, info.job})
 
-   -- Step 1 : Retrieve rating by jokes
-   print("Step 1 : Retrieve rating by jokes...")
+         self.U.info[userId] = info
 
-   local userRating = {}
-
-   for i = 1, data:size(1) do
-      for j = 1, data:size(2) do
-
-         local t = data[i][j]
-
-         if t ~= 0 then
-
-            local userId = i
-            local itemId = j
-
-            local rating =  preprocess(t)
-
-            if userRating[userId] == nil then 
-               userRating[userId] = {} 
-            end
-
-            table.insert(userRating[userId], 
-                {
-                  itemId = itemId, 
-                  rating = rating
-               })
-
-         end  
       end
+      usersfile:close()
+
+      self.U.info.metaDim = 2 + 7 + 21
+
    end
 
+end
+
+function movieLensLoader:LoadMetaV(conf) 
 
 
+   if #conf.metaItem > 0 then
 
-   -- Step 2 : Separate training set and testing set in sparse matrix
-   print("Step 2 : Separate training set and testing set in sparse matrix...")
-   local train, test = computeTestAndTrain(userRating, ratio)
+      local moviesfile = io.open(conf.metaItem, "r")
 
-   return train, test
+      for line in moviesfile:lines() do
+
+         local movieIdStr, title, genre = line:match('(%d+)::(.*)::(.*)')
+         --local movieIdStr, title, day, month, year, url, genreStr = line:match('(%d+)|(.*)|(%d+)-(%a+)-(%d+)||(.-)|(.*)')
+
+         if movieIdStr ~= nil then 
+
+            local movieId = tonumber(movieIdStr)
+            
+            
+            local info = self.V.info[movieId] or {}
+
+            info.title  = title
+            info.genre  = genreToBinary(genre)
+
+            info.full   = info.genre
+
+            self.V.info[movieId] = info   
+
+         else
+            local movieIdStr = line:match('(%d+)|')
+            local movieId = tonumber(movieIdStr)
+            print("unable to parse movie (".. movieId .. ") : " .. line)
+            self.V.info[movieId] = {}
+         end
+      end
+      
+     moviesfile:close()
+     
+     self.V.info.metaDim = 18
+
+   end
 
 end
 
 
-local function LoadJester(file, ratio)
 
 
-   local file = torch.DiskFile(file, "r")
-   local data = file:readObject()
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
 
+local jesterLoader, parent = torch.class('jesterLoader', 'DataLoader')
+
+function jesterLoader:LoadRatings(conf)
 
    function preprocess(x)  return (x)/10 end
    function postprocess(x) return (x)*10 end
 
+   local file = torch.DiskFile(conf.ratings, "r")
+   local data = file:readObject()
 
    -- Step 1 : Retrieve rating by jokes
-   print("Step 1 : Retrieve rating by jokes...")
-
-   local userRating = {}
-
    for i = 1, data:size(1) do
       for j = 1, data:size(2) do
 
@@ -223,31 +278,51 @@ local function LoadJester(file, ratio)
 
             local userId = i
             local itemId = j
-
             local rating =  preprocess(t)
-
-            if userRating[userId] == nil then 
-               userRating[userId] = {} 
-            end
-
-            table.insert(userRating[userId], 
-               {
-                  itemId = itemId, 
-                  rating = rating
-               })
-
-         end  
+   
+            self:AppendOneRating(userId, itemId, rating)
+         end 
       end
    end
 
+end
 
 
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
 
-   -- Step 2 : Separate training set and testing set in sparse matrix
-   print("Step 2 : Separate training set and testing set in sparse matrix...")
-   local train, test = computeTestAndTrain(userRating, ratio)
+local dummyLoader, parent = torch.class('dummyLoader', 'DataLoader')
 
-   return train, test
+function dummyLoader:__init(noUsers, noItems, sparseRate)
+   self.sparseRate = 0.4
+   self.noUsers = 200
+   self.noItems = 200
+   self.sparsifier = function(x) if torch.uniform() < self.sparseRate then return 0 else return x end end
+end
+
+function dummyLoader:LoadRatings(conf)
+
+   function preprocess(x)  return x end
+   function postprocess(x) return x end
+
+   local data = torch.Tensor(self.noUsers, self.noItems):uniform(-1, 1)
+   data:apply(self.sparsifier)
+  
+   for i = 1, data:size(1) do
+      for j = 1, data:size(2) do
+
+         local t = data[i][j]
+
+         if t ~= 0 then
+   
+            local userId = i
+            local itemId = j
+            local rating = preprocess(t)
+   
+            self:AppendOneRating(userId, itemId, rating)
+         end 
+      end
+   end
 
 end
 
@@ -255,20 +330,49 @@ end
 
 
 
-function LoadData(conf)
+   ----------------------------------------------------------------------
+   -- parse command-line options
+   --
+   cmd = torch.CmdLine()
+   cmd:text()
+   cmd:text('Store Data SDAE network for collaborative filtering')
+   cmd:text()
+   cmd:text('Options')
+   -- general options:
+   cmd:option('-ratings'        , '../data/movieLens/ratings-1M.dat', 'The relative path to your data file')
+   cmd:option('-metaUser'       , ''                                 , 'The relative path to your metadata file for users')
+   cmd:option('-metaItem'       , ''                                 , 'The relative path to your metadata file for items')
+   cmd:option('-fileType'       , "movieLens"                        , 'The data file format (jester/movieLens/classic)')
+   cmd:option('-out'            , "./movieLens-1M.t7"                 , 'The data file format (jester/movieLens/classic)')
+   cmd:option('-ratio'          , 0.9                                , 'The training ratio')
+   cmd:option('-seed'           , 1234                               , 'The seed')
+   cmd:text()
 
-   if     conf.type == "movieLens" then
-      return LoadRatings(conf.file, conf.ratio, '(%d+)::(%d+)::(%d+)::(%d+)')
-   elseif conf.type == "jester" then
-      return LoadJester(conf.file, conf.ratio)
-   elseif conf.type == "classic" then
-      return LoadRatings(conf.file, conf.ratio, '(%d+) (%d+) (%d+)')
-   elseif conf.type == "bidon" then
-      return LoadBidon(conf.file, conf.ratio, '(%d+) (%d+) (%d+)')
+   local params = cmd:parse(arg)
+
+   print("Options: ")
+   for key, val in pairs(params) do
+      print(" - " .. key  .. "  \t : " .. tostring(val))
+   end
+
+
+   local dataLoader
+   if     params.fileType == "movieLens" then dataLoader = movieLensLoader:new()
+   elseif params.fileType == "jester"    then dataLoader = jesterLoader:new()
+   elseif params.fileType == "classic"   then dataLoader = classicLoader:new()
+   elseif params.fileType == "dummy"     then dataLoader = dummyLoader:new()
    else
       error("Unknown data format, it must be :  movieLens / jester / none ")
    end
 
-end
+   local train, test = dataLoader:LoadData(params.ratio,params)
+
+   print("Saving data in torch format...")
+   local data = {train = train, test = test}
+   torch.save(params.out, data) 
+   print('Successfuly saved : ' .. params.out)
+   
+
+
 
 

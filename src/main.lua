@@ -8,8 +8,6 @@ torch.setdefaulttensortype('torch.FloatTensor')
 
 require("nnsparse")
 
-dofile("data.lua")
-
 dofile("AlgoTools.lua")
 
 dofile("AutoEncoderTrainer.lua")
@@ -26,13 +24,10 @@ cmd:text('Learn SDAE network for collaborative filtering')
 cmd:text()
 cmd:text('Options')
 -- general options:
-cmd:option('-file'        , '../data/movieLens/ratings-1M.dat' , 'The relative path to your data file')
-cmd:option('-conf'        , "config.template.lua"              , 'The relative path to the lua configuration file')
-cmd:option('-ratio'       , 0.9                                , 'The training ratio')
-cmd:option('-fileType'    , "movieLens"                        , 'The data file format (jester/movieLens/classic)')
-cmd:option('-seed'        , 1234                               , 'The seed')
-cmd:option('-gpu'         , true                               , 'use gpu')
-cmd:option('-out'         , '../out.csv'                       , 'The path to store the final matrix (csv) ')
+cmd:option('-file'           , './movieLens-1M.t7'    ,  'The relative path to your data file (torch format)')
+cmd:option('-conf'           , "config.template.lua"  , 'The relative path to the lua configuration file')
+cmd:option('-seed'           , 1234                   , 'The seed')
+cmd:option('-gpu'            , true                   , 'use gpu')
 cmd:text()
 
 
@@ -44,25 +39,56 @@ for key, val in pairs(params) do
    print(" - " .. key  .. "  \t : " .. tostring(val))
 end
 
-USE_GPU = params.gpu
-if USE_GPU then
-  require("cunn")
-end
+
 
 torch.manualSeed(params.seed)
 math.randomseed(params.seed)
 
 
 --Load data
-local train, test = LoadData(
-   {
-      type  = params.fileType,
-      ratio = params.ratio,
-      file  = params.file,
-   })
-   
-   
-   
+print("loading data...")
+local data = torch.load(params.file) 
+local train = data.train
+local test  = data.test
+
+print(train.U.size .. " Users loaded")
+print(train.V.size .. " Items loaded")
+
+
+USE_GPU = params.gpu
+
+if USE_GPU then
+  print("Loading cunn...")
+  require("cunn")
+  
+  print("Loading data to GPU")
+  local function toGPU(type)
+     local _train = train[type]
+     local _test  = test [type]
+     
+     for k, _ in pairs(train[type].data) do
+     
+         _train.data[k] = _train.data[k]:cuda()
+         
+         if _test .data[k] then  
+            _test .data[k] = _test .data[k]:cuda()
+         end
+              
+         if _train.info.metaDim then
+            _train.info[k].full = _train.info[k].full:cuda()
+         end
+     end
+  end
+  
+  toGPU("U")
+  toGPU("V")
+  
+end
+
+
+
+
+
 --Load configuration
 dofile(params.conf)
 
@@ -92,5 +118,6 @@ elseif configV then
 end
 
 print("done!")
+
 
 
