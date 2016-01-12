@@ -54,13 +54,16 @@ function SDAECriterionGPU:prepareInput(inputs)
          self.alphaMask:resizeAs(index):bernoulli(self.hideRatio)
          self.betaMask:resizeAs(index):fill(1):add(-1,self.alphaMask)
 
-         self.alphaIndex:maskedSelect(index, self.alphaMask)
-         self.betaIndex:maskedSelect(index, self.betaMask)
-
-         if torch.type(index) ~= "torch.CudaTensor" then
+        if torch.type(index) ~= "torch.CudaTensor" then
+            index = index:long() 
+            self.alphaMask  = self.alphaMask:byte()
+            self.betaMask   = self.betaMask:byte()
             self.alphaIndex = self.alphaIndex:long()
             self.betaIndex  = self.betaIndex:long()
          end
+
+         self.alphaIndex:maskedSelect(index, self.alphaMask)
+         self.betaIndex:maskedSelect(index, self.betaMask)
 
          --if there is no input : reverse alphaMask/betaMask
          if self.betaIndex:nDimension() == 0 then
@@ -79,8 +82,8 @@ function SDAECriterionGPU:prepareInput(inputs)
          self.mask[k]:indexFill(1, self.betaIndex , self.beta)
 
          if self.alphaIndex:nDimension() > 0 then
-            self.output[k][{{},2}]:cmul(self.alphaMask) --hide input
-            self.mask[k]:indexFill(1, self.alphaIndex, self.alpha)
+             self.output[k][{{},2}]:cmul(self.betaMask)
+             self.mask[k]:indexFill(1, self.alphaIndex, self.alpha)
          end
 
       end   
