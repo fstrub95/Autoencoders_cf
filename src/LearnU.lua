@@ -7,20 +7,15 @@ local function trainNN(train, test, config, name)
    local bottleneck = {}
    bottleneck[0] = train.dimension
 
-   local i = 0
+   local i = 1
    for key, confLayer in pairs(config) do
          if string.starts(key, "layer") then
-
             if config.useMetaData == true then 
-		bottleneck[i] = confLayer.layerSize + train.info.metaDim
+               bottleneck[i] = confLayer.layerSize + train.info.metaDim
             else
-		bottleneck[i] = confLayer.layerSize
+               bottleneck[i] = confLayer.layerSize
             end
-
-            if torch.type(confLayer.criterion) == "nnsparse.SDAECriterionGPU" then
-               confLayer.criterion.inputDim = confLayer.layerSize
-            end
-            
+            i = i + 1
          end
    end
 
@@ -110,6 +105,10 @@ local function trainNN(train, test, config, name)
             -- inform the trainer that data are sparse
             if k == 1 then network.isSparse = true end
 
+	    -- configure loss criterion 
+            if torch.type(sgdConf.criterion) == "nnsparse.SDAECriterionGPU" then
+               sgdConf.criterion.inputDim = confLayer.layerSize
+            end
 
             --compute data (can be improved)
             local newtrain = train.data
