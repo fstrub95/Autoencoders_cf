@@ -18,7 +18,7 @@ local function trainNN(train, test, config, name)
             end
 
             if torch.type(confLayer.criterion) == "nnsparse.SDAECriterionGPU" then
-               criterion.inputDim = confLayer.layerSize
+               confLayer.criterion.inputDim = confLayer.layerSize
             end
             
          end
