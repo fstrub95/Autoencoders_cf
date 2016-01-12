@@ -1,6 +1,6 @@
 local SDAECriterionGPU, parent = torch.class('nnsparse.SDAECriterionGPU', 'nn.Criterion')
 
-function SDAECriterionGPU:__init(criterion, inputSize, SDAEconf)
+function SDAECriterionGPU:__init(criterion, SDAEconf, inputSize)
    parent.__init(self)
 
    self.criterion = criterion
@@ -8,7 +8,7 @@ function SDAECriterionGPU:__init(criterion, inputSize, SDAEconf)
    self.alpha = SDAEconf.alpha or 1   
    self.beta  = SDAEconf.beta  or 0
 
-   self.inputDim = inputSize
+   self.inputDim = inputSize or 0
    
    self.noiseRatio = SDAEconf.noiseRatio or 0
    self.noiseMean = SDAEconf.noiseMean or 0
@@ -23,7 +23,6 @@ function SDAECriterionGPU:__init(criterion, inputSize, SDAEconf)
 end
 
  
-
 
 function SDAECriterionGPU:prepareInput(inputs)
 
