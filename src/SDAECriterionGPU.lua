@@ -109,7 +109,7 @@ function SDAECriterionGPU:prepareInput(inputs)
       for i = 1, inputs:size(1) do
          self.shuffle:randperm(inputs:size(2))
        
-         local shuflle = self.shuffle 
+         local shuffle = self.shuffle 
          if torch.type(inputs) == "torch.CudaTensor" then
             self.shuffleGPU = self.shuffleGPU or inputs.new()
             self.shuffleGPU:resize(self.shuffle:size()):copy(self.shuffle)
