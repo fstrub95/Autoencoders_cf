@@ -22,6 +22,8 @@ function SDAECriterionGPU:__init(criterion, inputSize, SDAEconf)
    self.output = nil
 end
 
+ 
+
 
 function SDAECriterionGPU:prepareInput(inputs)
 
@@ -29,53 +31,59 @@ function SDAECriterionGPU:prepareInput(inputs)
    if torch.type(inputs) == "table" then
    
       self.output = self.output or {}
-      if #self.output ~=  #inputs then self.output = {} end
 
-      self.mask       = self.inputs or inputs[1].new()   
+      --reset output if mini-bacth size is modified
+      if #self.output ~=  #inputs then 
+         self.output = {} 
+      end
+
+      self.mask       = self.mask or inputs[1].new()   
       self.mask:resize(#inputs, self.inputDim):zero()
 
-      self.bufRand   = self.bufRand  or inputs[1].new()
+      self.alphaMask = self.alphaMask or inputs[1].new()
+      self.betaMask  = self.betaMask  or inputs[1].new()
+
+      self.alphaIndex = self.alphaIndex or inputs[1].new()
+      self.betaIndex  = self.betaIndex  or inputs[1].new()
 
       for k, oneInput in pairs(inputs) do
 
-         self.bufRand:resize(oneInput:size(1)):uniform()
-
-         local alphaMask = self.bufRand:lt(self.hideRatio)
-         local betaMask  = alphaMask:eq(0)
-
          local index = oneInput[{{},1}]
-         local data  = oneInput[{{},2}]
 
-         local alphaIndex = index[alphaMask]
-         local betaIndex  = index[betaMask]
+         --compte mask (lt et eq does not have inplace equivalent)
+         self.alphaMask:resizeAs(index):bernoulli(self.hideRatio)
+         self.betaMask:resizeAs(index):fill(1):add(-1,self.alphaMask)
+
+         self.alphaIndex:maskedSelect(index, self.alphaMask)
+         self.betaIndex:maskedSelect(index, self.betaMask)
 
          if torch.type(index) ~= "torch.CudaTensor" then
-            alphaIndex = alphaIndex:long()
-            betaIndex  = betaIndex:long()
+            self.alphaIndex = self.alphaIndex:long()
+            self.betaIndex  = self.betaIndex:long()
          end
 
          --if there is no input : reverse alphaMask/betaMask
-         if betaIndex:nDimension() == 0 then
-            local swapBuf = alphaIndex
-            alphaIndex = betaIndex
-            betaIndex  = swapBuf
+         if self.betaIndex:nDimension() == 0 then
+            local swapBuf   = self.alphaIndex
+            self.alphaIndex = self.betaIndex
+            self.betaIndex  = swapBuf
 
-            swapBuf   = alphaMask
-            alphaMask = betaMask
-            betaMask  = swapBuf
+            swapBuf        = self.alphaMask
+            self.alphaMask = self.betaMask
+            self.betaMask  = swapBuf
          end
 
          self.output[k] = self.output[k] or oneInput.new()
          self.output[k]:resizeAs(oneInput):copy(oneInput)
 
-         self.mask[k]:indexFill(1, betaIndex , self.beta)
+         self.mask[k]:indexFill(1, self.betaIndex , self.beta)
 
-         if alphaIndex:nDimension() > 0 then
-            self.output[k][{{},2}][alphaMask] = 0 
-            self.mask[k]:indexFill(1, alphaIndex, self.alpha)
+         if self.alphaIndex:nDimension() > 0 then
+            self.output[k][{{},2}]:cmul(self.alphaMask) --hide input
+            self.mask[k]:indexFill(1, self.alphaIndex, self.alpha)
          end
 
-      end
+      end   
    else
    
       self.shuffle = self.shuffle or torch.Tensor(inputs:size(2))
