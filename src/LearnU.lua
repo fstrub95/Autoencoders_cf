@@ -3,18 +3,24 @@
 
 local function trainNN(train, test, config, name)
 
+
+
    -- retrieve layer size
    local bottleneck = {}
-   bottleneck[0] = train.dimension
    
-   local i = 0
-   for key, confLayer in pairs(config) do
-         if string.starts(key, "layer") then
-            i = i + 1
-            bottleneck[i] = math.floor(train.dimension / confLayer.coefLayer)
-         end
+   local metaDim = 0
+   if config.useMetaData == true then 
+      metaDim = train.info.metaDim
    end
 
+   bottleneck[0] = train.dimension
+   local i = 1
+   for key, confLayer in pairs(config) do
+         if string.starts(key, "layer") then
+            bottleneck[i] = confLayer.layerSize
+            i = i + 1
+         end
+   end
 
 
    --Step 1 : Build networks
@@ -22,8 +28,13 @@ local function trainNN(train, test, config, name)
    local decoders = {}
    local finalNetwork
    
-   local i = 0
+    local appenderIn = nil
+    if config.useMetaData == true then
+        appenderIn = nnsparse.AppenderIn:new()
+    end
    
+   
+   local i = 0
    for key, confLayer in pairs(config) do
    
       if string.starts(key, "layer") then
@@ -32,24 +43,38 @@ local function trainNN(train, test, config, name)
          --ENCODERS
          encoders[i] = nn.Sequential()
          
-         --TODO testU Densify vs SparseLinear
+         if i == 1  then --spare input
          
-         if i == 1  then 
+            if appenderIn then
+               encoders[i]:add(nnsparse.AppenderSparseOut(appenderIn)) 
+            end
+            
             if USE_GPU then
-               encoders[i]:add(nnsparse.Densify(bottleneck[i-1])) 
-               encoders[i]:add(nn.Linear(bottleneck[i-1], bottleneck[i]))
+               encoders[i]:add(nnsparse.Densify(bottleneck[i-1] + metaDim)) 
+               encoders[i]:add(      nn.Linear (bottleneck[i-1] + metaDim, bottleneck[i]))
             else
-               encoders[i]:add(nnsparse.SparseLinearBatch(bottleneck[i-1], bottleneck[i], false))
-            end               
-         else
-            encoders[i]:add(nn.Linear(bottleneck[i-1], bottleneck[i]))
+               encoders[i]:add(nnsparse.SparseLinearBatch(bottleneck[i-1] + metaDim, bottleneck[i], false))
+            end     
+                      
+         else --dense input
+         
+            if appenderIn then 
+               encoders[i]:add(nnsparse.AppenderOut(appenderIn)) 
+            end
+            
+            encoders[i]:add(nn.Linear(bottleneck[i-1] + metaDim, bottleneck[i]))
          end
                   
          encoders[i]:add(nn.Tanh())
          
          --DECODERS
          decoders[i] = nn.Sequential()
-         decoders[i]:add(nn.Linear(bottleneck[i],bottleneck[i-1]))
+         
+         if config.useMetaData then 
+            decoders[i]:add(nnsparse.AppenderOut(appenderIn)) 
+         end
+         
+         decoders[i]:add(nn.Linear(bottleneck[i] + metaDim ,bottleneck[i-1]))
          decoders[i]:add(nn.Tanh())
          
          -- tied weights
@@ -80,6 +105,7 @@ local function trainNN(train, test, config, name)
             local step    = noLayer-k+1
             local sgdConf = confLayer[step]
             sgdConf.name = name .. "." .. key .. "-" .. step 
+            
 
 
             -- Build intermediate networks
@@ -88,16 +114,22 @@ local function trainNN(train, test, config, name)
             for i = noLayer, k      , -1 do network:add(decoders[i]) end
 
             if USE_GPU then 
-                 print("use GPU")
                  network:cuda()
                  sgdConf.criterion:cuda()
             end
 
             network = FlatNetwork(network)
 
-
             -- inform the trainer that data are sparse
             if k == 1 then network.isSparse = true end
+
+            -- provide input information to SDAE
+            if torch.type(sgdConf.criterion) == "nnsparse.SDAECriterionGPU" then
+               sgdConf.criterion.inputDim = bottleneck[k-1]
+            end
+            
+            -- provide metaData information
+            sgdConf.appenderIn = appenderIn
 
 
             --compute data (can be improved)
@@ -141,7 +173,6 @@ local function trainNN(train, test, config, name)
    print("******** BEST MAE  = " .. bestMAE)
 
    
-
    local estimate = finalNetwork:forward(train.data)
 
    return error,estimate

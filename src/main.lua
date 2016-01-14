@@ -12,7 +12,7 @@ dofile("AlgoTools.lua")
 
 dofile("AutoEncoderTrainer.lua")
 dofile("LearnU.lua")
-
+dofile("Appender.lua")
 
 
 ----------------------------------------------------------------------
@@ -45,6 +45,12 @@ torch.manualSeed(params.seed)
 math.randomseed(params.seed)
 
 
+
+--Load configuration
+dofile(params.conf)
+
+
+
 --Load data
 print("loading data...")
 local data = torch.load(params.file) 
@@ -54,14 +60,14 @@ local test  = data.test
 print(train.U.size .. " Users loaded")
 print(train.V.size .. " Items loaded")
 
-
-USE_GPU = params.gpu
+SHOW_PROGRESS = true
+USE_GPU       = params.gpu
 
 if USE_GPU then
   print("Loading cunn...")
   require("cunn")
   
-  print("Loading data to GPU")
+  print("Loading data to GPU...")
   local function toGPU(type)
      local _train = train[type]
      local _test  = test [type]
@@ -75,7 +81,8 @@ if USE_GPU then
          end
               
          if _train.info.metaDim then
-            _train.info[k].full = _train.info[k].full:cuda()
+            _train.info[k].full       = _train.info[k].full:cuda()
+            _train.info[k].fullSparse = _train.info[k].fullSparse:cuda()
          end
      end
   end
@@ -87,10 +94,6 @@ end
 
 
 
-
-
---Load configuration
-dofile(params.conf)
 
 
 --compute neural network

@@ -23,6 +23,7 @@ function AutoEncoderTrainer:new(network, conf, train, test, info, maxIndex)
 --      conf.weightDecays = newObj.tikhonov.lambdas
 --   end
 
+
    self.__index = self
 
    return setmetatable(newObj, self)
@@ -47,9 +48,14 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
    -- bufferize minibatch
    local input
    if network.isSparse then input = {}
-   else                     input = inputs[1].new(sgdOpt.miniBatchSize, inputs[1]:size(1))
+   else                     input = inputs.new(sgdOpt.miniBatchSize, inputs[1]:size(1))
    end
-
+   
+   -- prepare meta-data
+   local denseMetadata  = inputs[1].new(sgdOpt.miniBatchSize, self.info.metaDim)
+   local sparseMetadata = {}
+   
+   local appenderIn = sgdOpt.appenderIn or nnsparse.AppenderDummy:new()
 
    -- shuffle index for data
    local noSample = GetSize(inputs)
@@ -69,6 +75,10 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
          local shuffledIndex = shuffle[cursor]
          if inputs[shuffledIndex] then -- warning tables are not always continuous
             input[noPicked] = inputs[shuffledIndex]
+            
+            denseMetadata[noPicked]  = self.info[shuffledIndex].full
+            sparseMetadata[noPicked] = self.info[shuffledIndex].fullSparse
+
             noPicked = noPicked + 1
          end
 
@@ -79,11 +89,11 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
       -- Define the closure to evalute w and dw
       local function feval(x)
 
-         -- get new parameters
-         if x ~= w then w:copy(x) end
-
          -- Reset gradients and losses
          network:zeroGradParameters()
+
+         --Prepare metadata
+         appenderIn:prepareInput(denseMetadata, sparseMetadata)
 
          -- AutoEncoder targets
          local target = input
@@ -91,9 +101,11 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
          -- Compute noisy input for Denoising AutoEnc 
          local noisyInput = lossFct:prepareInput(input) 
          
+
          --- FORWARD
          local output = network:forward(noisyInput)
          local loss   = lossFct:forward(output, target)
+         
          --- BACKWARD
          local dloss = lossFct:backward(output, target)
          local _     = network:backward(noisyInput, dloss)
@@ -133,6 +145,7 @@ function  AutoEncoderTrainer:Test(sgdOpt)
    -- start evaluating
    network:evaluate()
 
+   local appenderIn = sgdOpt.appenderIn or nnsparse.AppenderDummy:new()
 
    if self.isSparse then
 
@@ -148,6 +161,10 @@ function  AutoEncoderTrainer:Test(sgdOpt)
       --Prepare minibatch
       local inputs  = {}
       local targets = {}
+
+      -- prepare meta-data
+      local denseMetadata  = train[1].new(sgdOpt.miniBatchSize, self.info.metaDim)
+      local sparseMetadata = {}
 
       local i = 1
       local noSample = 0
@@ -168,19 +185,26 @@ function  AutoEncoderTrainer:Test(sgdOpt)
             -- center the target values
             targets[i][{{}, 2}]:add(-self.info[k].mean)
 
+            denseMetadata[i]  = self.info[k].full
+            sparseMetadata[i] = self.info[k].fullSparse
+
+
             noSample = noSample + target:size(1)
             i = i + 1
 
             --compute loss when minibatch is ready
             if #inputs == sgdOpt.miniBatchSize then
 
-               local output       = network:forward(inputs)
+               --Prepare metadata
+               appenderIn:prepareInput(denseMetadata, sparseMetadata)
+
+               local output = network:forward(inputs)
 
                rmse = rmse + rmseFct:forward(output, targets)
                --mae  = mae  + maeFct:forward(output, targets)
 
                --reset minibatch
-               inputs  = {}
+               inputs = {}
                i = 1
 
             end
@@ -190,7 +214,12 @@ function  AutoEncoderTrainer:Test(sgdOpt)
       -- remaining data for minibatch
       if #inputs > 0 then
          local _targets = {unpack(targets, 1, #inputs)} --retrieve a subset of targets
-
+         
+         local _sparseMetadata = {unpack(sparseMetadata, 1, #inputs)}
+         local _denseMetadata =  denseMetadata[{{1, #inputs},{}}] 
+         
+         appenderIn:prepareInput(_denseMetadata, _sparseMetadata)
+        
          local output = network:forward(inputs)
 
          rmse = rmse + rmseFct:forward(output, _targets)
@@ -227,7 +256,7 @@ function AutoEncoderTrainer:Execute(sgdOpt)
 
    for t = 1, noEpoch do
 
-      xlua.progress(t, noEpoch)
+      if SHOW_PROGRESS == true then xlua.progress(t, noEpoch) end
 
       --train one epoch
       self:Train(sgdOpt, t)
