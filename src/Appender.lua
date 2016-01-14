@@ -12,6 +12,7 @@ local AppenderOut, parent = torch.class('nnsparse.AppenderOut', 'nn.Module')
 function AppenderOut:__init(appenderIn)
    parent:__init()
    self.appenderIn = appenderIn
+   self.output = nil
 end
 
 
@@ -21,6 +22,7 @@ function AppenderOut:updateOutput(input)
    local inputToAppend = self.appenderIn.input
 
    self.prevSize = input:size()
+   self.output = self.output:typeAs(input)
 
    if inputToAppend ~= nil then
       --self.output:resize(input:size(1), input:size(2) + inputToAppend:size(2))
