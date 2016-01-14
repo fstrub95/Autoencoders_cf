@@ -96,5 +96,98 @@ end
 
 
 
+local function GetnElement(X) 
+   if torch.isTensor(X)  then 
+      return X:nElement()
+   elseif torch.type(X) == "table" then 
+      local size = 0
+      for _, _ in pairs(X) do size = size + 1 end
+      return size
+   else return nil
+   end
 
+end
+
+local Batchifier2, parent = torch.class('nnsparse.Batchifier2')
+
+function Batchifier2:__init(network, outputSize, appenderIn, info)
+   self.network    = network
+   self.outputSize = outputSize
+   self.appenderIn = appenderIn
+end
+
+function Batchifier2:forward(data, batchSize, info)
+   
+   -- no need for batch for dense Tensor
+   if torch.isTensor(data) then
+   
+      if self.appenderIn then
+         local denseInfo  = torch.Tensor():typeAs(data[1]):resize(batchSize, info.metaDim):zero()
+         for k = 1, data:size(1) do
+            if info[k] then
+               denseInfo[k] = info[k]
+            end
+         end
+         self.appenderIn:prepareInput(denseInfo)
+      end
+      
+      return self.network:forward(data)
+   end
+      
+   batchSize = batchSize or 20
+   
+   local nFrame    = GetnElement(data)
+
+   --Prepare minibatch
+   local inputs   = {}
+   local outputs  = data[#data].new(nFrame, self.outputSize) 
+   
+   local denseInfo  = torch.Tensor():typeAs(data[1]):resize(batchSize, info.metaDim):zero()
+   local sparseInfo = {}
+   
+   assert(torch.type(data) == "table")
+
+   local i      = 1
+   local cursor = 0
+   for k, input in pairs(data) do
+
+      inputs[i]  = input   
+      
+      if self.appenderIn then
+          denseInfo[i]  = info[k].full
+          sparseInfo[i] = info[k].fullSparse
+      end
+      
+      i = i + 1
+
+      --compute loss when minibatch is ready
+      if #inputs == batchSize then
+         local start =  cursor   *batchSize + 1
+         local stop  = (cursor+1)*batchSize
+
+         if self.appenderIn then
+            self.appenderIn:prepareInput(denseInfo,sparseInfo)
+         end
+         
+         outputs[{{start,stop},{}}] = self.network:forward(inputs)
+         
+         inputs = {}
+         
+         i = 1
+         cursor = cursor + 1       
+      end
+   end
+
+   if #inputs > 0 then
+      local start = nFrame-(i-1) + 1
+      local stop  = nFrame
+
+      self.appenderIn:prepareInput(denseInfo[{{1, #inputs},{}}], {unpack(sparseInfo, 1, #inputs)})
+
+      outputs[{{start,stop},{}}] = self.network:forward(inputs)
+   end  
+
+   return outputs
+
+end
    
