@@ -6,13 +6,12 @@ local function trainNN(train, test, config, name)
 
 
    -- retrieve layer size
-   local bottleneck = {}
-   
    local metaDim = 0
    if config.useMetaData == true then 
       metaDim = train.info.metaDim
    end
 
+   local bottleneck = {}
    bottleneck[0] = train.dimension
    local i = 1
    for key, confLayer in pairs(config) do
@@ -84,11 +83,13 @@ local function trainNN(train, test, config, name)
          end
             
       end
+
+      if torch.type(confLayer.criterion) == "nnsparse.SDAECriterionGPU" then
+         criterion.inputDim = bottleneck[i]
+      end
    
    end
    
-
-
    local error = {rmse = {}, mae = {}}
    
 
