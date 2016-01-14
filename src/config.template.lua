@@ -2,10 +2,10 @@ dofile("SDAECriterionGPU.lua")
 
 configV = 
 {
+   useMetadata = false,
    layer1 = 
    {      
-      isTied    = false,
-      coefLayer = 10,
+      layerSize = 700,
       { 
          criterion = nnsparse.SDAECriterionGPU(nn.MSECriterion(),
          {
@@ -13,8 +13,7 @@ configV =
             beta  = 0.8,
             hideRatio = 0.20,
          }), 
-         --criterion = nn.MSECriterion(),
-         noEpoch = 1, 
+         noEpoch = 15, 
          miniBatchSize = 20,
          learningRate = 0.03,  
          learningRateDecay = 0.1,
@@ -25,9 +24,7 @@ configV =
    
    layer2 = 
    {
-      isTied    = false,
-      plot      = false,
-      coefLayer = 12,
+      layerSize = 500,
       { 
          criterion = nnsparse.SDAECriterionGPU(nn.MSECriterion(),
          {

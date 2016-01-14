@@ -42,7 +42,7 @@ local function trainNN(train, test, config, name)
          --ENCODERS
          encoders[i] = nn.Sequential()
          
-         if i == 1  then --spare input
+         if i == 1  then --sparse input
          
             if appenderIn then
                encoders[i]:add(nnsparse.AppenderSparseOut(appenderIn)) 
@@ -84,10 +84,6 @@ local function trainNN(train, test, config, name)
             
       end
 
-      if torch.type(confLayer.criterion) == "nnsparse.SDAECriterionGPU" then
-         criterion.inputDim = bottleneck[i]
-      end
-   
    end
    
    local error = {rmse = {}, mae = {}}
