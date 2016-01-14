@@ -7,13 +7,10 @@ configV =
       isTied    = false,
       coefLayer = 10,
       { 
-         criterion = nnsparse.SDAECriterionGPU(nn.MSECriterion(),6040,
+         criterion = nnsparse.SDAECriterionGPU(nn.MSECriterion(),
          {
             alpha = 1,
-            beta  = 1,
-            noiseRatio = 0,
-            flipRatio = 0.05,
-            flipRange = torch.Tensor{-1, 1},
+            beta  = 0.8,
             hideRatio = 0.20,
          }), 
          --criterion = nn.MSECriterion(),
@@ -22,7 +19,6 @@ configV =
          learningRate = 0.03,  
          learningRateDecay = 0.1,
          weightDecay = 0.03,
---         momentum = 0.8 ,
       },
       
    },
@@ -33,40 +29,34 @@ configV =
       plot      = false,
       coefLayer = 12,
       { 
-         criterion = nnsparse.SDAECriterion(nn.MSECriterion(),
+         criterion = nnsparse.SDAECriterionGPU(nn.MSECriterion(),
          {
             alpha = 1,
-            beta  = 1,
-            noiseRatio = 0.8,
-            noiseStd  = 0.05, 
-            flipRatio = 0,
-            flipRange = torch.Tensor{-1, 1},
-            hideRatio = 0,
+            beta  = 0.8,
+            noiseRatio = 0.2,
+            noiseStd  = 0.02, 
          }),
          noEpoch = 40, 
          miniBatchSize = 5,
-         learningRate  = 1e-5,  
+         learningRate  = 1e-4,  
          learningRateDecay = 0.1,
          weightDecay = 0.2,
          momentum = 0.8
       },
       
       {
-         criterion = nnsparse.SDAESparseCriterion(nn.MSECriterion(),
+         criterion = nnsparse.SDAECriterionGPU(nn.MSECriterion(),
          {
             alpha = 1.2,
             beta  = 0.8,
             noiseRatio = 0,
-            flipRatio = 0.05,
-            flipRange = torch.Tensor{-1, 1},
-            hideRatio = 0.15,
+            hideRatio = 0.20,
          }),
          noEpoch = 15,
          miniBatchSize = 20,
          learningRate  = 0.003,
          learningRateDecay = 0.2,
          weightDecay = 0.03,
---         momentum = 0.8,
          
       },
       
