@@ -145,7 +145,7 @@ function SDAECriterionGPU:updateGradInput(estimate, target)
 
    --if sparse
    if torch.type(target) == "table" then
-      self.densifier = self.densifier or nnsparse.Densify(self.inputDim)
+      self.densifier = self.densifier or nnsparse.Densify(estimate:size(2))
       target = self.densifier:forward(target)
    end
    
