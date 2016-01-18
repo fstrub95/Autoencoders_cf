@@ -76,24 +76,28 @@ if USE_GPU then
      
          _train.data[k] = _train.data[k]:cuda()
          
-         if _test .data[k] then  
-            _test .data[k] = _test .data[k]:cuda()
-         end
-              
          if _train.info.metaDim then
             _train.info[k].full       = _train.info[k].full:cuda()
             _train.info[k].fullSparse = _train.info[k].fullSparse:cuda()
          end
      end
+     
+     for k, _ in pairs(test[type].data) do
+
+         _test .data[k] = _test .data[k]:cuda()
+
+         if _train.info.metaDim then
+            _train.info[k].full       = _train.info[k].full:cuda()
+            _train.info[k].fullSparse = _train.info[k].fullSparse:cuda()
+         end
+     end
+
   end
   
   toGPU("U")
   toGPU("V")
   
 end
-
-
-
 
 
 --compute neural network

@@ -133,9 +133,9 @@ local function trainNN(train, test, config, name)
             local newtrain = train.data
             local newtest  = test.data
             for i = 1, k-1 do
-               local batchifier = nnsparse.Batchifier(encoders[i], bottleneck[i])
-               newtrain = batchifier:forward(newtrain, 20)
-               newtest  = batchifier:forward(newtest, 20) 
+               local batchifier = nnsparse.Batchifier2(encoders[i], bottleneck[i], appenderIn)
+               newtrain = batchifier:forward(newtrain, 20, train.info)
+               newtest  = batchifier:forward(newtest, 20, train.info) 
             end
 
             --Train network
