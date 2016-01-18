@@ -26,8 +26,27 @@ table.merge = table.merge or function(t1,  t2)
     return t1
 end
 
-table.concat = table.concat or function(a, b)
-for k,v in pairs(b) do a[k] = v end
+--[[---------------------------------------------------------
+   Name: table.Count( table )
+   Desc: Returns the number of keys in a table
+-----------------------------------------------------------]]
+function table.Count( t )
+   local i = 0
+   for k in pairs( t ) do i = i + 1 end
+   return i
+end
+
+--[[---------------------------------------------------------
+   Name: table.Random( table )
+   Desc: Return a random key
+-----------------------------------------------------------]]
+function table.Random( t )
+   local rk = math.random( 1, table.Count( t ) )
+   local i = 1
+   for k, v in pairs( t ) do 
+      if ( i == rk ) then return v, k end
+      i = i + 1 
+   end
 end
 
 string.starts = string.starts or function (String,Start)
