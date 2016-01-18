@@ -52,10 +52,14 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
    end
    
    -- prepare meta-data
-   local denseMetadata  = inputs[1].new(sgdOpt.miniBatchSize, self.info.metaDim)
+   
+   
+   local appenderIn = sgdOpt.appenderIn
+   
+   local denseMetadata  = inputs[1].new(sgdOpt.miniBatchSize, self.info.metaDim or 0)
    local sparseMetadata = {}
    
-   local appenderIn = sgdOpt.appenderIn or nnsparse.AppenderDummy:new()
+
 
    -- shuffle index for data
    local noSample = GetSize(inputs)
@@ -76,9 +80,11 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
          if inputs[shuffledIndex] then -- warning tables are not always continuous
             input[noPicked] = inputs[shuffledIndex]
             
-            denseMetadata[noPicked]  = self.info[shuffledIndex].full
-            sparseMetadata[noPicked] = self.info[shuffledIndex].fullSparse
-
+            if appenderIn then
+               denseMetadata[noPicked]  = self.info[shuffledIndex].full
+               sparseMetadata[noPicked] = self.info[shuffledIndex].fullSparse
+            end
+            
             noPicked = noPicked + 1
          end
 
@@ -93,8 +99,9 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
          network:zeroGradParameters()
 
          --Prepare metadata
-         appenderIn:prepareInput(denseMetadata, sparseMetadata)
-
+         if appenderIn then
+            appenderIn:prepareInput(denseMetadata, sparseMetadata)
+         end
          -- AutoEncoder targets
          local target = input
       
@@ -145,7 +152,7 @@ function  AutoEncoderTrainer:Test(sgdOpt)
    -- start evaluating
    network:evaluate()
 
-   local appenderIn = sgdOpt.appenderIn or nnsparse.AppenderDummy:new()
+   local appenderIn = sgdOpt.appenderIn
 
    if self.isSparse then
 
@@ -163,11 +170,12 @@ function  AutoEncoderTrainer:Test(sgdOpt)
       local targets = {}
 
       -- prepare meta-data
-      local denseMetadata  = train[1].new(sgdOpt.miniBatchSize, self.info.metaDim)
+      local denseMetadata  = train[1].new(sgdOpt.miniBatchSize, self.info.metaDim or 0)
       local sparseMetadata = {}
 
       local i = 1
       local noSample = 0
+
 
       for k, input in pairs(train) do
 
@@ -177,6 +185,7 @@ function  AutoEncoderTrainer:Test(sgdOpt)
          -- Ignore data with no testing examples
          if target ~= nil then
 
+
             inputs[i]  = input
 
             targets[i] = targets[i] or target.new()
@@ -185,9 +194,10 @@ function  AutoEncoderTrainer:Test(sgdOpt)
             -- center the target values
             targets[i][{{}, 2}]:add(-self.info[k].mean)
 
-            denseMetadata[i]  = self.info[k].full
-            sparseMetadata[i] = self.info[k].fullSparse
-
+            if appenderIn then
+               denseMetadata[i]  = self.info[k].full
+               sparseMetadata[i] = self.info[k].fullSparse
+            end
 
             noSample = noSample + target:size(1)
             i = i + 1
@@ -196,8 +206,10 @@ function  AutoEncoderTrainer:Test(sgdOpt)
             if #inputs == sgdOpt.miniBatchSize then
 
                --Prepare metadata
-               appenderIn:prepareInput(denseMetadata, sparseMetadata)
-
+               if appenderIn then
+                  appenderIn:prepareInput(denseMetadata, sparseMetadata)
+               end
+               
                local output = network:forward(inputs)
 
                rmse = rmse + rmseFct:forward(output, targets)
@@ -215,10 +227,12 @@ function  AutoEncoderTrainer:Test(sgdOpt)
       if #inputs > 0 then
          local _targets = {unpack(targets, 1, #inputs)} --retrieve a subset of targets
          
-         local _sparseMetadata = {unpack(sparseMetadata, 1, #inputs)}
-         local _denseMetadata =  denseMetadata[{{1, #inputs},{}}] 
-         
-         appenderIn:prepareInput(_denseMetadata, _sparseMetadata)
+         if appenderIn then
+            local _sparseMetadata = {unpack(sparseMetadata, 1, #inputs)}
+            local _denseMetadata =  denseMetadata[{{1, #inputs},{}}] 
+            
+            appenderIn:prepareInput(_denseMetadata, _sparseMetadata)
+         end
         
          local output = network:forward(inputs)
 
@@ -232,7 +246,10 @@ function  AutoEncoderTrainer:Test(sgdOpt)
       local w, dw = network:getParameters()
 
 
-      --print("FULL : " .. math.sqrt(rmseFct:forward(network:forward(self.train), self.test))*2)
+--      print("FULL : " .. 
+--      math.sqrt(
+--         rmseFct:forward(network:forward(self.train), self.test)/noSample)*2
+--      )
 
    else
       -- compute reconstruction loss
@@ -271,13 +288,13 @@ function AutoEncoderTrainer:Execute(sgdOpt)
       self.mae [#self.mae +1] =  newMAE
 
 
-      if newPredictionRMSE ~= NaN and newMAE ~= NaN then
+      if newPredictionRMSE ~= NaN then --and newMAE ~= NaN then
          print(t .. "/" .. noEpoch .. "\t RMSE : "  .. newPredictionRMSE .. "\t MAE : "  .. newMAE )
-      end
-
-      if newReconstructionRMSE ~= NaN  then
+      else
          print(t .. "/" .. noEpoch .. "\t RMSE : "  .. newReconstructionRMSE )
       end
+
+
 
    end
 
