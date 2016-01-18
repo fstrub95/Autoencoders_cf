@@ -26,6 +26,10 @@ table.merge = table.merge or function(t1,  t2)
     return t1
 end
 
+table.concat = table.concat or function(a, b)
+for k,v in pairs(b) do a[k] = v end
+end
+
 string.starts = string.starts or function (String,Start)
    return string.sub(String,1,string.len(Start))==Start
 end
