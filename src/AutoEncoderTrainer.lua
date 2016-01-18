@@ -138,7 +138,7 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
 end
 
 
-
+inf = 1/0
 function  AutoEncoderTrainer:Test(sgdOpt)
 
    local network = self.network
@@ -146,7 +146,7 @@ function  AutoEncoderTrainer:Test(sgdOpt)
    local train   = self.train
    local test    = self.test
 
-   local loss, rmse, mae = NaN,NaN,NaN
+   local loss, rmse, mae = inf,inf,inf
 
 
    -- start evaluating
@@ -288,7 +288,7 @@ function AutoEncoderTrainer:Execute(sgdOpt)
       self.mae [#self.mae +1] =  newMAE
 
 
-      if newPredictionRMSE ~= NaN then --and newMAE ~= NaN then
+      if newPredictionRMSE ~= inf then --and newMAE ~= NaN then
          print(t .. "/" .. noEpoch .. "\t RMSE : "  .. newPredictionRMSE .. "\t MAE : "  .. newMAE )
       else
          print(t .. "/" .. noEpoch .. "\t RMSE : "  .. newReconstructionRMSE )

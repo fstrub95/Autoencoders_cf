@@ -1,6 +1,3 @@
-
-
-
 local function trainNN(train, test, config, name)
 
 
@@ -174,9 +171,9 @@ local function trainNN(train, test, config, name)
    print("******** BEST MAE  = " .. bestMAE)
 
    
-   local estimate = finalNetwork:forward(train.data)
+   --local estimate = finalNetwork:forward(train.data)
 
-   return error,estimate
+   return bestRMSE --error,estimate
 
 end
 
