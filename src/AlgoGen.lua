@@ -39,10 +39,13 @@ function AlgoGen:EvaluateOne(gene)       return 0     end
 
 
 function AlgoGen:PrintOne(gene)             
-   print('Gene:')
-   for key, value in pairs(gene) do
-      print(" - " .. key .. ' : ' .. value)
-   end
+    local bufKey = {}
+    for key, _ in pairs(gene) do table.insert(bufKey, key) end
+    table.sort(bufKey)
+    for _, key in pairs(bufKey) do 
+       print(" - " .. key .. ' : ' .. gene[key])
+    end
+
 end
 
 
@@ -50,16 +53,16 @@ function AlgoGen:MutateOne(gene)
    
    --Generate a new Gene and ramdomly pick one of his element to apply it to the mutated gene
    local geneBuf = self:GenerateOne()
-   local toMutate math.random( 1, #geneBuf )   
-   gene[toMutate] = geneBuf[toMutate]
+   local val, key = table.Random( geneBuf )   
+   gene[key] = val
 
    return gene  
 end
 
 
-function AlgoGen:CrossOver(geneA, geneB) 
+function AlgoGen:CrossOne(geneA, geneB) 
    local geneC = {}
-   for key, _ in pairs(geneA) do
+   for key, value in pairs(geneA) do
       if type(value) == "number" then
          geneC[key] = 2/3 * geneA[key] + 1/3 * geneB[key] 
       else
@@ -86,7 +89,7 @@ function AlgoGen:Learn()
    for k = 1, self.noGenes do
       local newGene = {}
       newGene.gene  = self:GenerateOne()
-      newGene.score = 999
+      newGene.score = NaN
       
       genes[#genes+1] = newGene
    end
@@ -102,14 +105,14 @@ function AlgoGen:Learn()
       
       
       print("Sort the final scores") 
-      table.sort(genes, function(geneA,geneB) return geneA.score > geneB.score end)      
+      table.sort(genes, function(geneA,geneB) return geneA.score < geneB.score end)      
 
       print("-------------------------------------------------------------------------------")  
       print("-------------------------------------------------------------------------------")  
       print("Best scores:")    
-      print(" - No1: " .. genes[1].score) print("") self:PrintOne(genes[1].gene) print("")
-      print(" - No2: " .. genes[2].score) print("") self:PrintOne(genes[2].gene) print("")
-      print(" - No3: " .. genes[3].score) print("") self:PrintOne(genes[2].gene) print("")
+      print("#### Score No1: " .. genes[1].score)  self:PrintOne(genes[1].gene) print("")
+      print("#### Score No2: " .. genes[2].score)  self:PrintOne(genes[2].gene) print("")
+      print("#### Score No3: " .. genes[3].score)  self:PrintOne(genes[3].gene) print("")
       print("-------------------------------------------------------------------------------")  
       print("-------------------------------------------------------------------------------")  
       
@@ -122,25 +125,26 @@ function AlgoGen:Learn()
       
       -- Start Creating a new family of genes
       local newGenes = {}
-      local noBest   = math.floor(#genes * self.ratioBest)
-      local noCross  = math.floor(#genes * self.ratioCross)
-      local noMutate = math.floor(#genes * self.ratioMutate)
-      local noNew    = math.floor(#genes * self.ratioNew)
+      local noBest   = math.floor(table.Count(genes) * self.ratioBest)
+      local noCross  = math.floor(table.Count(genes) * self.ratioCross)
+      local noMutate = math.floor(table.Count(genes) * self.ratioMutate)
+      local noNew    = math.floor(table.Count(genes) * self.ratioNew)
 
 
       -- Create two sets containing the best genes 
-      local S1 = { unpack(genes,             1, self.noBest) }
-      local S2 = { unpack(genes, self.noBest+1, self.noCross) }
+      local S1 = { unpack(genes,          1, noBest) }
+      local S2 = { unpack(genes, noBest + 1, noBest + noCross) }
 
 
       -- Copy Best genes
-      newGenes = table.concat(newGenes, S1)
+      table.merge(newGenes, S1)
   
       -- Cross Over set1 and set2
-      for _, fatherGene in pairs(S2) do
-         local motherGene =  S1[math.random( 1, #S1 )]
-         local newGene1 = self:CrossOne(motherGene, fatherGene)
-         local newGene2 = self:CrossOne(fatherGene, motherGene)
+      for _, oneGene in pairs(S2) do
+         local geneA = oneGene.gene
+         local geneB = S1[math.random( 1, #S1 )].gene
+         local newGene1 = { gene = self:CrossOne(geneA, geneB), score = NaN }
+         local newGene2 = { gene = self:CrossOne(geneB, geneA), score = NaN } 
          table.insert(newGenes, newGene1)
          table.insert(newGenes, newGene2)
       end
@@ -148,15 +152,15 @@ function AlgoGen:Learn()
       
       -- Mutate gene in set1
       for k = 1, noMutate do
-         local motherGene =  S1[math.random( 1, #S1 )]
-         local newGene = self:MutateOne(motherGene)
+         local geneA =  S1[math.random( 1, #S1 )].gene
+         local newGene = { gene = self:MutateOne(geneA), score = NaN }
          table.insert(newGenes, newGene)
       end
       
       
       -- Generate new genes
       for k = 1, noNew do
-         local newGene = self:GenerateOne()
+         local newGene = { gene = self:GenerateOne(), score = NaN}
          table.insert(newGenes, newGene)
       end
    

@@ -28,7 +28,7 @@ cmd:text('Learn SDAE network for collaborative filtering')
 cmd:text()
 cmd:text('Options')
 -- general options:
-cmd:option('-file'           , './movieLens-1M.t7'            , 'The relative path to your data file (torch format)')
+cmd:option('-file'           , './dummy.t7'            , 'The relative path to your data file (torch format)')
 cmd:option('-seed'           , 1234                    , 'The seed')
 cmd:option('-gpu'            , 0                       , 'use gpu')
 cmd:text()

@@ -24,6 +24,7 @@ function NNGen:GenerateOne()
    gene.lrtDecay2    = torch.uniform(-0.2, 0.4)
    gene.weigthDecay2 = torch.uniform(0.1, 0.0001)
    --gene.grad2        = "sgd"
+  
    
   return gene
 end
@@ -56,19 +57,18 @@ function NNGen:LoadGene(gene)
       {
          layerSize = gene.layer2,
          { 
---            criterion = nnsparse.SDAECriterionGPU(nn.MSECriterion(),
---            {
---               alpha = 1,
---               beta  = 0.8,
---               noiseRatio = 0.2,
---               noiseStd  = 0.02, 
---            }),
-            criterion = nn.MSECriterion(),
-            noEpoch = 10, 
-            miniBatchSize = 2,
-            learningRate  = 1e-4,  
+            criterion = nnsparse.SDAECriterionGPU(nn.MSECriterion(),
+            {
+               alpha = 1,
+               beta  = 0.8,
+               noiseRatio = 0.2,
+               noiseStd  = 0.02, 
+            }),
+            noEpoch = 0, 
+            miniBatchSize = 10,
+            learningRate  = 5e-5,  
             learningRateDecay = 0.1,
-            weightDecay = 0.1,
+            weightDecay = 0.2,
             momentum = 0.8
          },
          
@@ -79,7 +79,7 @@ function NNGen:LoadGene(gene)
                beta      = gene.beta2,
                hideRatio = gene.hide2,
             }), 
-            noEpoch           = 5, 
+            noEpoch           = 0, 
             miniBatchSize     = gene.batch2,
             learningRate      = gene.lrt2,  
             learningRateDecay = gene.lrtDecay2,
@@ -95,17 +95,20 @@ end
 
 
 function NNGen:EvaluateOne(gene) 
-   local conf = self:LoadGene(gene)
    
-    local fitness = 999
-   
-    if     self.nnType == "U" then fitness = trainU(self.train, self.test, conf)
-    elseif self.nnType == "V" then fitness = trainV(self.train, self.test, conf)           
-    else   
-      error("Invalid network type")
-    end
-    
-    return fitness
+   return torch.uniform()
+
+--   local conf = self:LoadGene(gene)
+--   
+--    local fitness = 999
+--   
+--    if     self.nnType == "U" then fitness = trainU(self.train, self.test, conf)
+--    elseif self.nnType == "V" then fitness = trainV(self.train, self.test, conf)           
+--    else   
+--      error("Invalid network type")
+--    end
+--    
+--    return fitness
 
 end
 
