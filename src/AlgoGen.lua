@@ -30,7 +30,10 @@ end
 --To implement
 function AlgoGen:Preconfigure(genConf)   end
 function AlgoGen:GenerateOne()           return nil   end
-function AlgoGen:EvaluateOne(gene)       return 0     end
+function AlgoGen:EvaluateAll(genes)      return nil   end
+
+
+
 
 
 
@@ -99,9 +102,10 @@ function AlgoGen:Learn()
    for t = 1, self.noEpoch + 1 do
 
       print("Evaluate genes...")
-      for k, oneGene in pairs(genes) do 
-           oneGene.score = self:EvaluateOne(oneGene.gene)
-      end
+        genes = self:EvaluateAll(genes)
+--      for k, oneGene in pairs(genes) do 
+--           oneGene.score = self:EvaluateOne(oneGene.gene)
+--      end
       
       
       print("Sort the final scores") 
