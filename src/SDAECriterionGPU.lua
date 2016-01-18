@@ -50,8 +50,8 @@ function SDAECriterionGPU:prepareInput(inputs)
          local index = oneInput[{{},1}]
 
          --compte mask (lt et eq does not have inplace equivalent)
-         self.alphaMask:resizeAs(index):bernoulli(self.hideRatio)
-         self.betaMask:resizeAs(index):fill(1):add(-1,self.alphaMask)
+         self.alphaMask:resize(index:size()):bernoulli(self.hideRatio)
+         self.betaMask:resize(index:size()):fill(1):add(-1,self.alphaMask)
 
         if torch.type(index) ~= "torch.CudaTensor" then
             index = index:long() 
@@ -81,14 +81,14 @@ function SDAECriterionGPU:prepareInput(inputs)
          self.mask[k]:indexFill(1, self.betaIndex , self.beta)
 
          if self.alphaIndex:nDimension() > 0 then
-             self.output[k][{{},2}]:cmul(self.betaMask)
+             self.output[k][{{},2}][self.alphaMask] = 0
              self.mask[k]:indexFill(1, self.alphaIndex, self.alpha)
          end
 
       end   
    else
    
-      self.shuffle = self.shuffle or torch.Tensor(inputs:size(2))
+      self.shuffle = self.shuffle or inputs.new() 
       
       if torch.type(inputs) ~= "torch.CudaTensor" then
          self.shuffle = self.shuffle:long()
@@ -107,24 +107,22 @@ function SDAECriterionGPU:prepareInput(inputs)
       self.noise:resize(noiseSize)
 
       for i = 1, inputs:size(1) do
-         self.shuffle:randperm(inputs:size(2))
-       
-         local shuffle = self.shuffle 
-         if torch.type(inputs) == "torch.CudaTensor" then
-            self.shuffleGPU = self.shuffleGPU or inputs.new()
-            self.shuffleGPU:resize(self.shuffle:size()):copy(self.shuffle)
-            shuffle = self.shuffleGPU
+      
+         if torch.type(inputs) ~= "torch.CudaTensor" then
+            self.shuffle:randperm(inputs:size(2))
+         else
+            self.shuffle:resize(inputs:size(2)):uniform(1,inputs:size(2)):floor()
          end
  
          if noiseSize > 0 then
-            self.output[i]:indexAdd(1 , shuffle[{{            1, noiseSize}}], self.noise:normal(self.noiseMean, self.noiseStd))
+            self.output[i]:indexAdd(1 , self.shuffle[{{            1, noiseSize}}], self.noise:normal(self.noiseMean, self.noiseStd))
          end
          
          if hideSize > noiseSize then
-            self.output[i]:indexFill(1, shuffle[{{noiseSize + 1, hideSize }}], 0)
+            self.output[i]:indexFill(1, self.shuffle[{{noiseSize + 1, hideSize }}], 0)
          end
          
-         self.mask[i]:indexFill(1, shuffle[{{1, hideSize}}], self.alpha)
+         self.mask[i]:indexFill(1, self.shuffle[{{1, hideSize}}], self.alpha)
       end         
                
    end
