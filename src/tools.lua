@@ -12,11 +12,38 @@ math.round = math.round or function(num, idp)
   return math.floor(num * mult + 0.5) / mult
 end
 
+--[[---------------------------------------------------------
+	Name: Copy(t, lookup_table)
+	Desc: Taken straight from http://lua-users.org/wiki/PitLibTablestuff
+		and modified to the new Lua 5.1 code by me.
+		Original function by PeterPrade!
+-----------------------------------------------------------]]
+function table.Copy( t, lookup_table )
+	if ( t == nil ) then return nil end
+
+	local copy = {}
+	setmetatable( copy, debug.getmetatable( t ) )
+	for i, v in pairs( t ) do
+		if ( torch.type(v) ~= "table" ) then
+			copy[ i ] = v
+		else
+			lookup_table = lookup_table or {}
+			lookup_table[ t ] = copy
+			if ( lookup_table[ v ] ) then
+				copy[ i ] = lookup_table[ v ] -- we already copied this table. reuse the copy.
+			else
+				copy[ i ] = table.Copy( v, lookup_table ) -- not yet copied. copy it.
+			end
+		end
+	end
+	return copy
+end
+
 
 table.merge = table.merge or function(t1,  t2)
     for k, v in pairs(t2) do
         if (type(v) == "table") and (type(t1[k] or false) == "table") then
-            merge(t1[k], t2[k])
+            table.merge(t1[k], t2[k])
         else
             if t1[k] == nil then
                t1[k] = v

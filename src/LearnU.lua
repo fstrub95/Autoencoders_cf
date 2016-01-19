@@ -1,7 +1,5 @@
 local function trainNN(train, test, config, name)
 
-
-
    -- retrieve layer size
    local metaDim = 0
    if config.useMetaData == true then 
@@ -186,6 +184,5 @@ function trainU(train, test, config)
 end
 
 function trainV(train, test, config)
-
    return trainNN(train["V"], test["V"], config, "V")
 end
