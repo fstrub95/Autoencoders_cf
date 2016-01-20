@@ -1,10 +1,12 @@
 # Collaborative Filtering with Stacked Denoising Encoders and Sparse Inputs
 
-Collaborative filering consists in predicting the rating of items by a user by using the feedback of all other users. In other words, it try to turn a spare matrix of ratings into a dense matrix of rating. 
+Original paper: https://hal.archives-ouvertes.fr/hal-01256422/document
 
-The following module tackle the issue by using sparse denoising autoencoders.
+Collaborative filering consists in predicting the rating of items by a user by using the feedback of all other users. In other words, it tries to turn a sparse matrix of ratings into a dense matrix of ratings. 
 
-You may run the program by executing the following command in the source folder:
+The following module tackles the issue by using sparse denoising autoencoders.
+
+You may run the program by executing the following commands in the source folder:
 
 ```
 th main.lua
