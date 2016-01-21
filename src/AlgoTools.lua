@@ -17,7 +17,7 @@ function algoTrain(train, test, algo, conf)
 
 
    local M       = torch.Tensor(Usize, Vsize):fill(NaN)
-   local lossFct = nn.SparseCriterion(nn.MSECriterion())
+   local lossFct = nnsparse.SparseCriterion(nn.MSECriterion())
    local algoLoss = 0
 
    local bestLoss = 999
@@ -36,7 +36,7 @@ function algoTrain(train, test, algo, conf)
             noRating = noRating + size
       end
       algoLoss = algoLoss / noRating
-      
+
 
       print("Loss = " .. math.sqrt(algoLoss)*2)
 
@@ -45,7 +45,7 @@ function algoTrain(train, test, algo, conf)
          break
       else
          bestLoss = algoLoss
-      end 
+      end
 
    end
 
@@ -69,27 +69,27 @@ function FlatNetwork(network)
          end
       end
    end
-   
+
    local layers = {}
    FlatNetworkRecursive(network, layers)
-   
-   
+
+
    local flatNetwork = nn.Sequential()
    for _, layer in pairs(layers) do
       flatNetwork:add(layer)
    end
-   
+
    return flatNetwork
 end
 
 
 function sortSparse(X)
-   
+
    local _ , index = X[{{},1}]:sort()
    local sX = torch.Tensor():resizeAs(X)
-   
+
    for k = 1, index:size(1) do
-      sX[k] = X[index[k]]   
+      sX[k] = X[index[k]]
    end
 
    return sX
@@ -98,4 +98,4 @@ end
 
 
 
-   
+
