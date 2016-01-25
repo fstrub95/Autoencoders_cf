@@ -5,8 +5,6 @@ torch.setdefaulttensortype('torch.FloatTensor')
 
 require("nnsparse")
 
-   dofile("data.lua")
-
 dofile ("tools.lua")
 dofile ("AlgoTools.lua")
 
@@ -185,7 +183,6 @@ lambdas = lambdas or
   0.12,
   0.15,
   0.2,
-  
 }
 
 
@@ -244,16 +241,12 @@ cmd:text('Learn SDAE network for collaborative filtering')
 cmd:text()
 cmd:text('Options')
 
-cmd:option('-fileType'    , "movieLens"                        , 'The data file format (jester/movieLens/classic)')
-cmd:option('-file'        , '../data/movieLens/ratings-1M.dat' , 'The relative path to your data file')
-cmd:option('-ratio'       , 0.9                                , 'The training ratio')
-cmd:option('-rank'        , 15                                 , 'Rank of the final matrix')
-cmd:option('-lambda'      , 0.03                               , 'Regularisation')
-cmd:option('-seed'        , 1234                               , 'The seed')
-cmd:option('-out'        , '../out.csv'                       , 'The path to store the final matrix (csv) ')
+cmd:option('-file'        , './movieLens-1M.t7'  , 'The relative path to your data file')
+cmd:option('-rank'        , 15                   , 'Rank of the final matrix')
+cmd:option('-lambda'      , 0.03                 , 'Regularisation')
+cmd:option('-seed'        , 1234                 , 'The seed')
 
 cmd:text()
-
 
 
 local params = cmd:parse(arg)
@@ -269,20 +262,18 @@ math.randomseed(params.seed)
 
 
 --Load data
-local train, test = LoadData(
-   {
-      type  = params.fileType,
-      ratio = params.ratio,
-      file  = params.file,
-   })
-   
-local U, V = pickBestAls(train, test, {params.rank}, {params.lambda})
+--Load data
+print("loading data...")
+local data = torch.load(params.file) 
+local train = data.train
+local test  = data.test
 
+print(train.U.size .. " Users loaded")
+print(train.V.size .. " Items loaded")
 
-print("Saving Matrix...")
-tensorToCsv(U*V:t(), params.out)
-print("done!")
-   
+local U, V = pickBestAls(train, test)   
+--local U, V = pickBestAls(train, test, {params.rank}, {params.lambda})
+
 
 
 

@@ -16,7 +16,7 @@ function algoTrain(train, test, algo, conf)
 
 
    local M       = torch.Tensor(Usize, Vsize):fill(NaN)
-   local lossFct = nn.SparseCriterion(nn.MSECriterion())
+   local lossFct = nnsparse.SparseCriterion(nn.MSECriterion())
    local algoLoss = 0
 
    local bestLoss = 999
