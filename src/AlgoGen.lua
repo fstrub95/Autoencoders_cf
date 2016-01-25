@@ -55,11 +55,12 @@ end
 function AlgoGen:MutateOne(gene) 
    
    --Generate a new Gene and ramdomly pick one of his element to apply it to the mutated gene
-   local geneBuf = self:GenerateOne()
+   local geneBuf  = self:GenerateOne()
    local val, key = table.Random( geneBuf )   
-   gene[key] = val
+   local newGene  = table.Copy(gene)
+   newGene[key]   = val
 
-   return gene  
+   return newGene  
 end
 
 
