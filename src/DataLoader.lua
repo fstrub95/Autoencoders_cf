@@ -45,6 +45,8 @@ end
 -- Protected Method (helper)
 function DataLoader:AppendOneRating(userId, itemId, rating)
 
+   self.__noRating = self.__noRating + 1
+
    --store the matrix size by keeping the max Id
    self.__Usize = math.max(self.__Usize, userId)
    self.__Vsize = math.max(self.__Vsize, itemId)
@@ -83,6 +85,8 @@ function DataLoader:__reset()
    self.__Vsize = 0
    self.__mean  = 0
    self.__n     = 0
+   
+   self.__noRating = 0
 end
 
 
@@ -120,6 +124,9 @@ function DataLoader:__PostProcessRating()
 
    self.train.U.dimension, self.test.U.dimension = self.__Vsize, self.__Vsize
    self.train.V.dimension, self.test.V.dimension = self.__Usize, self.__Usize
+   
+   self.train.U.noRating, self.test.U.noRating = self.__n, self.__noRating - self.__n
+   self.train.V.noRating, self.test.V.noRating = self.__n, self.__noRating - self.__n
    
    print(self.__Usize .. " users were loaded.")
    print(self.__Vsize .. " items were loaded.")

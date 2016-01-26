@@ -4,7 +4,6 @@ require("torch")
 torch.setdefaulttensortype('torch.FloatTensor') 
 require("nnsparse")
 
-dofile("data.lua")
 dofile ("tools.lua")
 dofile ("AlgoTools.lua")
 
@@ -18,18 +17,20 @@ function GradDescent:new(trainU, trainV)
 
    --precompute data
    local function computeSpareMatrix(train)
-      local M = {} 
+   
+      local M = torch.Tensor(train.noRating, 3)
+      
+      local cursor = 1
+      
       for i, ratings in pairs(train.data) do
          for k = 1, ratings:size(1) do
             
             local j =  ratings[k][1]
             local t =  ratings[k][2]
             
-            table.insert(M, {
-               i = i,
-               j = j,
-               val = t,
-            })
+            M[cursor] = torch.Tensor{i,j,t}
+            
+            cursor = cursor + 1
          end
       end
          
@@ -58,7 +59,9 @@ function GradDescent:init(trainU, trainV, conf)
    self.V = torch.Tensor(trainV.size, self.rank):uniform(-0.01, 0.01)
    
    for i, info in pairs(trainU.info) do
-      self.U[i][1] = info.mean 
+      if torch.type(info) == "table" then
+        self.U[i][1] = info.mean 
+      end
    end
    self.V[{{}, 1}] = 1
    
@@ -73,16 +76,16 @@ function GradDescent:eval(M)
 
 
    local targets = self.targets 
-   local shuffle = torch.randperm(#targets)
+   local shuffle = torch.randperm(targets:size(1))
 
    -- main algo
    for k = 1, shuffle:size(1) do
       local indexShuffle = shuffle[k]
       local target = targets[indexShuffle]
 
-      local i = target.i
-      local j = target.j
-      local t = target.val
+      local i = target[1]
+      local j = target[2]
+      local t = target[3]
 
       local u = self.U[i]
       local v = self.V[j]
@@ -215,14 +218,11 @@ cmd:text('Learn SDAE network for collaborative filtering')
 cmd:text()
 cmd:text('Options')
 -- general options:
-cmd:option('-fileType'    , "movieLens"                        , 'The data file format (jester/movieLens/classic)')
-cmd:option('-file'        , '../data/movieLens/ratings-1M.dat' , 'The relative path to your data file')
-cmd:option('-ratio'       , 0.9                                , 'The training ratio')
-cmd:option('-rank'        , 15                                 , 'Rank of the final matrix')
-cmd:option('-lambda'      , 0.02                               , 'Regularisation')
-cmd:option('-lrt'         , 0.02                               , 'Learning rate')
-cmd:option('-seed'        , 1234                               , 'The seed')
-cmd:option('-out'         , '../out.csv'                       , 'The path to store the final matrix (csv) ')
+cmd:option('-file'        , './movieLens-1M.t7' , 'The relative path to your data file')
+cmd:option('-rank'        , 15                  , 'Rank of the final matrix')
+cmd:option('-lambda'      , 0.02                , 'Regularisation')
+cmd:option('-lrt'         , 0.02                , 'Learning rate')
+cmd:option('-seed'        , 1234                , 'The seed')
 cmd:text()
 
 
@@ -240,19 +240,16 @@ math.randomseed(params.seed)
 
 
 --Load data
-local train, test = LoadData(
-   {
-      type  = params.fileType,
-      ratio = params.ratio,
-      file  = params.file,
-   })
+print("loading data...")
+local data = torch.load(params.file)
+local train = data.train
+local test  = data.test
+
+print(train.U.size .. " Users loaded")
+print(train.V.size .. " Items loaded")
    
 local U, V = pickBestGrad(train, test, {params.rank}, {params.lambda}, {params.lrt})
 
-
-print("Saving Matrix...")
-tensorToCsv(U*V:t(), params.out)
-print("done!")
 
 
 
