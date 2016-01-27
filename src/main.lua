@@ -24,10 +24,10 @@ cmd:text('Learn SDAE network for collaborative filtering')
 cmd:text()
 cmd:text('Options')
 -- general options:
-cmd:option('-file'           , './movieLens-1M.t7'    ,  'The relative path to your data file (torch format)')
+cmd:option('-file'           , './dummy.t7'    ,  'The relative path to your data file (torch format)')
 cmd:option('-conf'           , "config.template.lua"  , 'The relative path to the lua configuration file')
 cmd:option('-seed'           , 1234                   , 'The seed')
-cmd:option('-gpu'            , true                   , 'use gpu')
+cmd:option('-gpu'            , 0                   , 'use gpu')
 cmd:text()
 
 
@@ -59,14 +59,19 @@ local test  = data.test
 
 print(train.U.size .. " Users loaded")
 print(train.V.size .. " Items loaded")
+print("No Train rating : " .. train.U.noRating)
+print("No Test  rating : " .. test.U.noRating)
 
 SHOW_PROGRESS = true
-USE_GPU       = params.gpu
+USE_GPU       = params.gpu > 0
 
 if USE_GPU then
   print("Loading cunn...")
   require("cunn")
   
+  cutorch.setDevice(params.gpu)
+
+
   print("Loading data to GPU...")
   local function toGPU(type)
      local _train = train[type]
