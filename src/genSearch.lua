@@ -31,7 +31,8 @@ cmd:text('Options')
 -- general options:
 cmd:option('-file'           , './dummy.t7'            , 'The relative path to your data file (torch format)')
 cmd:option('-seed'           , 1234                    , 'The seed')
-cmd:option('-gpu'            , 0                       , 'use gpu')
+cmd:option('-gpu'            , 1                       , 'use gpu')
+cmd:option('-nn'              , "V"                     , 'autoencoder type')
 cmd:text()
 
 local params = cmd:parse(arg)
@@ -43,6 +44,9 @@ end
 
 torch.manualSeed(params.seed)
 math.randomseed(params.seed)
+
+GPU_DEVICE = params.gpu
+NN_TYPE    = params.nn 
 
 
 local genConf = 

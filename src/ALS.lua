@@ -1,18 +1,18 @@
 require("torch")
 require("nn")
 
-torch.setdefaulttensortype('torch.FloatTensor') 
+torch.setdefaulttensortype('torch.FloatTensor')
 
 require("nnsparse")
 
 dofile ("tools.lua")
 dofile ("AlgoTools.lua")
 
--- ALS, implementing 
+-- ALS, implementing
 -- http://www.grappa.univ-lille3.fr/~mary/cours/stats/centrale/reco/paper/MatrixFactorizationALS.pdf
 
 
-ALS = {} 
+ALS = {}
 
 function ALS:new(trainU, trainV)
    newObj = { }
@@ -25,17 +25,13 @@ function ALS:new(trainU, trainV)
 
          if train[i] ~= nil then
 
-            local index = train[i][{{},1}]:long() 
-            local rates = train[i][{{},2}] 
-
-            local mask = torch.zeros(nSize,1)
-            mask:indexFill(1, index, 1)
-
+            local index = train[i][{{},1}]:long()
+            local rates = train[i][{{},2}]
             local noRatedElem = rates:size(1)
 
             res[i] = {}
 
-            res[i].mask        = mask:byte()
+            res[i].index       = index
             res[i].noRatedElem = noRatedElem
             res[i].rates       = rates
 
@@ -57,7 +53,7 @@ function ALS:new(trainU, trainV)
 
    self.__index = self
 
-   return setmetatable(newObj, self)        
+   return setmetatable(newObj, self)       
 end
 
 function ALS:init(trainU, trainV, conf)
@@ -69,15 +65,21 @@ function ALS:init(trainU, trainV, conf)
    -- Matrix decomposition
    self.U = torch.Tensor(trainU.size, self.rank):uniform(-0.01, 0.01)
    self.V = torch.Tensor(trainV.size, self.rank):uniform(-0.01, 0.01)
-   
+  
    self.U[{{}, 1}] = 1
 --   self.V[{{}, 1}] = 1
-   
+  
 
 end
 
 
+--            if self.useBias then
+--               local bias = self.bias[torch.pointer(Y)][mask] -- Ybias
+--               bias:add(self.bias[torch.pointer(X)][i])       -- Xbias
+--               b:addmv(-1, Y_, bias)                          -- b = b - Y_*(Xbias[i] + Ybias[:])
+--            end
 
+  
 function ALS:eval(M)
 
    --- Solve the ALS linear system:
@@ -89,6 +91,17 @@ function ALS:eval(M)
    -- @param Y (in) vector that is set
    local function updateVector(X, Y, sparseRate)
 
+      self.Y_   = self.Y_  or X.new()
+      self.Yt_  = self.Yt_ or X.new()
+      
+      self.Regu = self.Regu or X.new(self.rank)
+      
+      self.A = self.A or X.new(self.rank, self.rank)
+      self.b = self.b or X.new()
+      
+      local mask = torch.Tensor():byte():resize(Y:size(1),1)
+
+     
       for i = 1, X:size(1) do
 
          local data = sparseRate[i]
@@ -96,33 +109,36 @@ function ALS:eval(M)
          if data ~= nil then
 
             -- retrieve the sparsed rated items/users
-            local r_          = data.rates
-            local noRatedElem = data.noRatedElem
-            local mask        = data.mask
+            local r_             = data.rates
+            local index          = data.index
+            local noRatedElem    = data.noRatedElem
+  
+            --compute mask with no memory allocation
+            mask:zero():indexFill(1, index, 1)
+           
 
-            -- Retrieve the rated user/item columns 
-            local Y_ = Y[mask:expandAs(Y)]:view(noRatedElem, self.rank):t() 
+            --move Y with no memory allocation
+            self.Y_ :resize(noRatedElem, self.rank)
+            self.Y_:maskedSelect(Y, mask:expand(Y:size()))
+            
+            --resize Y and its transpose to fit the problem dimension  
+            self.Y_:resize(noRatedElem, self.rank)
+            self.Yt_ = self.Y_:t()
 
             -- compute the regularization
-            local Regu = torch.Tensor(self.rank):fill(self.lambda*noRatedElem):diag()
+            self.Regu:fill(self.lambda*noRatedElem)
+            
+            self.A:diag(self.Regu):addmm(self.Yt_, self.Y_)
 
             -- step 2 : Solve the linear system
-            local A = Y_*Y_:t() + Regu
-            local b = Y_*r_
-
-
-            if self.useBias then
-               local bias = self.bias[torch.pointer(Y)][mask] -- Ybias
-               bias:add(self.bias[torch.pointer(X)][i])       -- Xbias
-               b:addmv(-1, Y_, bias)                          -- b = b - Y_*(Xbias[i] + Ybias[:])
-            end
+            self.A:diag(self.Regu):addmm(self.Yt_, self.Y_)
+            self.b:resize(self.rank):mv(self.Yt_, r_)
 
             -- solve linear system
-            X[i]:copy(torch.gesv(b:view(-1,1),A))
-
+            X[i]:copy(torch.gesv(self.b:view(-1,1),self.A))
 
          end
-         
+        
       end
    end
 
@@ -164,10 +180,10 @@ ranks = ranks or
 --12,
 --15,
 20
-} 
+}
 
 lambdas = lambdas or
-{ 
+{
   0.005,
   0.01,
   0.02,
@@ -201,7 +217,7 @@ for i = 1, #ranks do
 
       -- compute the ALS
       local loss, U, V = algoTrain(train, test, als, {
-         lambda = lambdas[j], 
+         lambda = lambdas[j],
          rank = ranks[i]
       })
 
@@ -273,7 +289,5 @@ print(train.V.size .. " Items loaded")
 
 local U, V = pickBestAls(train, test)   
 --local U, V = pickBestAls(train, test, {params.rank}, {params.lambda})
-
-
 
 

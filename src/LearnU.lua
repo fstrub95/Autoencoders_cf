@@ -99,6 +99,8 @@ local function trainNN(train, test, config, name)
             sgdConf.name = name .. "." .. key .. "-" .. step 
             
 
+            --if no epoch, skip!
+            if sgdConf.noEpoch > 0 then  
 
             -- Build intermediate networks
             local network = nn.Sequential()
@@ -108,7 +110,7 @@ local function trainNN(train, test, config, name)
             --Flatten network --> speedup + easier to debug
             network = FlatNetwork(network)
 
-            if USE_GPU then 
+            if USE_GPU then
                network:cuda()
                sgdConf.criterion:cuda()
             end
@@ -152,7 +154,7 @@ local function trainNN(train, test, config, name)
             end
             
             finalNetwork = network
-           
+            end
          end
       end
 

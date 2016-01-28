@@ -13,6 +13,14 @@ function movieLensLoader:LoadRatings(conf)
    -- step 3 : load ratings
    local ratesfile = io.open(conf.ratings, "r")
 
+
+   self.movieHash = {}
+   self.userHash  = {}
+
+   local itemCounter = 1
+   local userCounter = 1
+ 
+
    -- Step 1 : Retrieve movies'scores...th
    local i = 0
    for line in ratesfile:lines() do
@@ -23,9 +31,25 @@ function movieLensLoader:LoadRatings(conf)
       local itemId  = tonumber(movieIdStr)
       local rating  = tonumber(ratingStr)
 
+      local itemIndex = self.movieHash[itemId]
+      if itemIndex == nil then
+         self.movieHash[itemId] = itemCounter
+         itemIndex   = itemCounter
+         itemCounter = itemCounter + 1
+      end
+
+      userIndex = userId
+      local userIndex = self.userHash[userId]
+      if userIndex == nil then
+         self.userHash[userId] = userCounter
+         userIndex   = userCounter
+         userCounter = userCounter + 1
+      end
+
+
       rating = preprocess(rating)
 
-      self:AppendOneRating(userId, itemId, rating)
+      self:AppendOneRating(userIndex, itemIndex, rating)
 
       i = i + 1
       
@@ -90,18 +114,25 @@ function movieLensLoader:LoadMetaU(conf)
          local userIdStr, sex, age, job, ZIP = line:match('(%d+)::(%a)::(%d+)::(%d+)::(%d+)')
          --local userIdStr, age, sex, job, ZIP = line:match('(%d+)|(%d+)|(%a)|(%a+)|(.-)') --ignore code zip since it is ill formated
 
-         local userId = tonumber(userIdStr)
-           
-         local info = self.train.U.info[userId] or {}
-         
-         info.sex    = sexToBinary(sex)
-         info.age    = ageToBinary(age)
-         info.job    = jobToBinary(job)
-         
-         info.full       = torch.cat({info.sex, info.age, info.job})
-         info.fullSparse = info.full:sparsify(0, self.train.U.dimension)   
+         local userId    = tonumber(userIdStr)
+         local userIndex = self.userHash[userId] 
 
-         self.train.U.info[userId] = info
+         if userIndex ~= nil then
+
+            local info = self.train.U.info[userIndex] or {}
+
+            info.id     = userId
+            info.sex    = sexToBinary(sex)
+            info.age    = ageToBinary(age)
+            info.job    = jobToBinary(job)
+
+            info.full       = torch.cat({info.sex, info.age, info.job})
+            info.fullSparse = info.full:sparsify(0, self.train.U.dimension)
+
+            self.train.U.info[userIndex] = info
+         else
+            print("No ratings for user : " .. userId )
+         end
 
       end
       usersfile:close()
@@ -172,18 +203,25 @@ function movieLensLoader:LoadMetaV(conf)
 
          if movieIdStr ~= nil then 
 
-            local movieId = tonumber(movieIdStr)
-            
-            
-            local info = self.train.V.info[movieId] or {}
+            local movieId    = tonumber(movieIdStr)     
+            local movieIndex = self.movieHash[movieId]
 
-            info.title  = title
-            info.genre  = genreToBinary(genre)
+            if movieIndex ~= nil then
+                
+                local info = self.train.V.info[movieIndex] or {}
 
-            info.full       = info.genre
-            info.fullSparse = info.full:sparsify(0, self.train.V.dimension)
+                info.id     = movieId
+                info.title  = title
+                info.genre  = genreToBinary(genre)
 
-            self.train.V.info[movieId] = info   
+                info.full       = info.genre
+                info.fullSparse = info.full:sparsify(0, self.train.V.dimension)
+
+                self.train.V.info[movieIndex] = info
+
+            else
+                print("No ratings for movieId : " .. movieId .. " - " .. title)
+            end
 
          else
             local movieIdStr = line:match('(%d+)|')
