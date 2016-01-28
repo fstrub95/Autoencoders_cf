@@ -9,18 +9,17 @@ configV =
       { 
          criterion = nnsparse.SDAECriterionGPU(nn.MSECriterion(),
          {
-            alpha = 1.1074643210508,
-            beta  = 0.82831857485386,
-            hideRatio = 0.22428934609828,
+            alpha = 0.98453737460077,
+            beta  = 0.57107167015783,
+            hideRatio = 0.12414132046979,
          }), 
          noEpoch = 20, 
          miniBatchSize = 35,
-         learningRate = 0.039843164927637,  
-         learningRateDecay = 0.22584167215973,
-         weightDecay = 0.080668330929863,
+         learningRate = 0.061001000545609,  
+         learningRateDecay = 0.3127887416165,
+         weightDecay = 0.056381709873676,
       },
       
    },
 }
-
 

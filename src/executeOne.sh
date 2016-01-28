@@ -5,7 +5,8 @@ path=$2
 gpu=$3
 
 for file in ${path}/*.t7 
-do 
-  echo "th main.lua -file ${file} -conf ${conf} -gpu ${gpu} >> ${file}.log"
+do
+  echo "Current : th main.lua -file ${file} -conf ${conf} -gpu ${gpu} >> ${file}.log" 
+  th main.lua -file ${file} -conf ${conf} -gpu ${gpu} >> ${file}.${conf}.log
 done
 

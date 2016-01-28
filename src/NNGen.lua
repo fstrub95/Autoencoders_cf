@@ -6,7 +6,7 @@ function NNGen:GenerateOne()
    self.nnType = NN_TYPE
 
    local gene = {}
-   gene.layer1       = torch.random (500 , 700)
+ --  gene.layer1       = torch.random (500 , 700)
    gene.alpha1       = torch.uniform(0.8 , 1.2)
    gene.beta1        = torch.uniform(0   , 1)
    gene.hide1        = torch.uniform(0   , 0.5)
@@ -17,13 +17,13 @@ function NNGen:GenerateOne()
    --gene.grad1      = "sgd"
 
 --   gene.layer2       = torch.random (400 , 600)
---   gene.alpha2       = torch.uniform(0.8 , 1.2)
---   gene.beta2        = torch.uniform(0.  , 1)
---   gene.hide2        = torch.uniform(0   , 0.5)
+   gene.alpha2       = torch.uniform(0.8 , 1.2)
+   gene.beta2        = torch.uniform(0.  , 1)
+   gene.hide2        = torch.uniform(0   , 0.5)
 --   gene.batch2       = 25--torch.random(10, 50)
---   gene.lrt2         = torch.uniform(0, 0.1)
---   gene.lrtDecay2    = torch.uniform(-0.2, 0.4)
---   gene.weigthDecay2 = torch.uniform(0, 0.1)
+   gene.lrt2         = torch.uniform(0, 0.1)
+   gene.lrtDecay2    = torch.uniform(-0.2, 0.4)
+   gene.weigthDecay2 = torch.uniform(0, 0.1)
 --   gene.grad2        = "sgd"
 
 
@@ -46,7 +46,7 @@ function NNGen:LoadGene(gene)
       {
          layer1 = 
          {      
-            layerSize = gene.layer1,
+            layerSize = 700,-- gene.layer1,
             { 
                criterion = nnsparse.SDAECriterionGPU(nn.MSECriterion(),
                   {
@@ -54,7 +54,7 @@ function NNGen:LoadGene(gene)
                      beta      = gene.beta1,
                      hideRatio = gene.hide1,
                   }), 
-               noEpoch           = 8, 
+               noEpoch           = 15, 
                miniBatchSize     = 35, -- gene.batch1,
                learningRate      = gene.lrt1,  
                learningRateDecay = gene.lrtDecay1,
@@ -65,19 +65,19 @@ function NNGen:LoadGene(gene)
 
          layer2 = 
          {
-            layerSize = 1, --gene.layer2,
+            layerSize = 500, --gene.layer2,
             { 
                criterion = nnsparse.SDAECriterionGPU(nn.MSECriterion(),
                   {
-                     alpha = gene.alpha3 or 0,
-                     beta  = gene.beta3 or 0,
-                     noiseRatio = gene.noiseRatio3 or 0,
-                     noiseStd  = gene.noiseStd3 or 0, 
+                     alpha = gene.alpha3 or 1,
+                     beta  = gene.beta3 or 0.8,
+                     noiseRatio = gene.noiseRatio3 or 0.2,
+                     noiseStd  = gene.noiseStd3 or 0.02, 
                   }),
-               noEpoch = 0, 
+               noEpoch = 4, 
                miniBatchSize = 20,
-               learningRate  = gene.lrt3 or 0,  
-               weightDecay   = gene.weigthDecay3 or 0,
+               learningRate  = gene.lrt3 or 1e-5,  
+               weightDecay   = gene.weigthDecay3 or 0.2,
                momentum = 0.8
             },
 
@@ -88,7 +88,7 @@ function NNGen:LoadGene(gene)
                      beta      = gene.beta2 or 0,
                      hideRatio = gene.hide2 or 0,
                   }), 
-               noEpoch           = 0, 
+               noEpoch           = 15, 
                miniBatchSize     = 25, -- gene.batch2,
                learningRate      = gene.lrt2 or 0,  
                learningRateDecay = gene.lrtDecay2 or 0,
