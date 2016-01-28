@@ -114,18 +114,19 @@ function Batchifier2:__init(network, outputSize, appenderIn, info)
    self.network    = network
    self.outputSize = outputSize
    self.appenderIn = appenderIn
+   self.info = info
 end
 
-function Batchifier2:forward(data, batchSize, info)
+function Batchifier2:forward(data, batchSize)
    
    -- no need for batch for dense Tensor
    if torch.isTensor(data) then
    
       if self.appenderIn then
-         local denseInfo  = torch.Tensor():typeAs(data[1]):resize(batchSize, info.metaDim):zero()
+         local denseInfo  = torch.Tensor():typeAs(data[1]):resize(batchSize, self.info.metaDim):zero()
          for k = 1, data:size(1) do
-            if info[k] then
-               denseInfo[k] = info[k]
+            if self.info[k] then
+               denseInfo[k] = self.info[k]
             end
          end
          self.appenderIn:prepareInput(denseInfo)
@@ -140,9 +141,9 @@ function Batchifier2:forward(data, batchSize, info)
 
    --Prepare minibatch
    local inputs   = {}
-   local outputs  = data[#data].new(nFrame, self.outputSize) 
+   local outputs  = data[table.Count(data)].new(nFrame, self.outputSize) 
    
-   local denseInfo  = torch.Tensor():typeAs(data[1]):resize(batchSize, info.metaDim):zero()
+   local denseInfo  = data[1].new(batchSize, self.info.metaDim):zero()
    local sparseInfo = {}
    
    assert(torch.type(data) == "table")
@@ -154,8 +155,8 @@ function Batchifier2:forward(data, batchSize, info)
       inputs[i]  = input   
       
       if self.appenderIn then
-          denseInfo[i]  = info[k].full
-          sparseInfo[i] = info[k].fullSparse
+          denseInfo[i]  = self.info[k].full
+          sparseInfo[i] = self.info[k].fullSparse
       end
       
       i = i + 1
