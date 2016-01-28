@@ -38,7 +38,6 @@ function movieLensLoader:LoadRatings(conf)
          itemCounter = itemCounter + 1
       end
 
-      userIndex = userId
       local userIndex = self.userHash[userId]
       if userIndex == nil then
          self.userHash[userId] = userCounter
@@ -56,6 +55,8 @@ function movieLensLoader:LoadRatings(conf)
       if math.fmod(i, 100000) == 0 then
          print(i .. " ratings loaded...")
       end
+
+
 
    end
    ratesfile:close()
@@ -163,6 +164,7 @@ end
    "Thriller",
    "War",
    "Western",
+   "IMAX"
  }
  
  
@@ -170,6 +172,7 @@ end
  for k, genre in pairs(genreList) do
    genreToIndex[genre] = k
  end
+ genreToIndex["Children"] = 4
 
 
 
@@ -180,7 +183,17 @@ local function genreToBinary(genreStr, offset)
    local genreTable = string.split(genreStr, "|")
 
    for _,itemGenre in pairs(genreTable) do 
-      genre[genreToIndex[itemGenre]] = 1
+      
+      --typo exception
+      if itemGenre == "Children" then itemGenre = "Children's" end
+      
+      local genreIndex = genreToIndex[itemGenre]
+      if genreIndex ~= nil then
+        genre[genreIndex] = 1
+      else
+        error("Unknow genre : " .. itemGenre)
+      end
+      
    end
    
    return genre
@@ -192,13 +205,40 @@ end
 function movieLensLoader:LoadMetaV(conf) 
 
 
+  if #conf.tags > 0 then
+
+    local csv2tensor = require 'csv2tensor'
+    local tagTensor  = csv2tensor.load(conf.tags)
+
+    for i = 1, tagTensor:size(1) do
+
+      -- idMovie, tag1, tag2, tag3 etc.
+      local movieId = tagTensor[i][1]
+      local tag     = tagTensor[{i, {2, tagTensor:size(2)}}]
+
+      local movieIndex = self.movieHash[movieId]
+      if movieIndex ~= nil then
+        local info = self.train.V.info[movieIndex] or {}
+        
+        info.tag  = tag
+
+        info.full = tag
+        info.fullSparse = tag:sparsify(0, self.train.V.dimension)
+
+        self.train.V.info[movieIndex] = info
+      end
+
+    end
+  end
+
+
    if #conf.metaItem > 0 then
 
       local moviesfile = io.open(conf.metaItem, "r")
 
       for line in moviesfile:lines() do
 
-         local movieIdStr, title, genre = line:match('(%d+)::(.*)::(.*)')
+         local movieIdStr, title, genreStr = line:match('(%d+)::(.*)::(.*)')
          --local movieIdStr, title, day, month, year, url, genreStr = line:match('(%d+)|(.*)|(%d+)-(%a+)-(%d+)||(.-)|(.*)')
 
          if movieIdStr ~= nil then 
@@ -212,9 +252,14 @@ function movieLensLoader:LoadMetaV(conf)
 
                 info.id     = movieId
                 info.title  = title
-                info.genre  = genreToBinary(genre)
+                info.genre  = genreToBinary(genreStr)
 
-                info.full       = info.genre
+
+                --if there is some tags, append the genre to the tags
+                if info.full then  info.full = info.genre:cat(info.full)
+                else               info.full = info.genre
+                end 
+
                 info.fullSparse = info.full:sparsify(0, self.train.V.dimension)
 
                 self.train.V.info[movieIndex] = info
@@ -230,8 +275,11 @@ function movieLensLoader:LoadMetaV(conf)
             self.train.V.info[movieId] = {}
          end
       end
+       
+      moviesfile:close()
       
-     moviesfile:close()
+      
+
      
      self.train.V.info.metaDim = 18
 

@@ -29,8 +29,10 @@ def returnsvd(filepath, k):
     reindtag = pd.Series({indtag[i]: i for i in np.arange(len(indtag))})
     data["tag_id"] = reindtag[data["tag_id"].values].values
     data_sparse = coo_matrix((data["count"].values.astype(float), (data["item_id"].values, data["tag_id"].values))).tolil()
+
     #m = data_sparse.sum()/float(data_sparse.getnnz())
     #data_sparse.data = [elt - m for elt in data_sparse.data]
+
     print("..........sparse matrix built")
 
     p, d, q = splin.svds(data_sparse.tocsc(), k)
@@ -43,7 +45,8 @@ def returnsvd(filepath, k):
     print(real_val)
     predsvd = np.dot(np.dot(p,np.diag(d)),q)
     pred = predsvd[reinditem[item]][tag_indices]
-    test = (zip(*sorted(zip(real_val, pred, tag_indices))))
+    test = list(zip(*sorted(zip(real_val, pred, tag_indices))))
+
     for i in range(len(test[0])):
         print(test[0][i],test[1][i],reindtag[reindtag==test[2][i]].index[0])
     #print(np.std(data_sparse.A),np.std(predsvd),np.std(predsvd-data_sparse.A))
@@ -53,8 +56,9 @@ def returnsvd(filepath, k):
 
 ## INPUT !!!!
 ####################
-p, d, q, reinditem = returnsvd("tags.dat", 50)
-f = open("movieLens-10M.tags.dat", "w")
+rank = 50 
+p, d, q, reinditem = returnsvd("movieLens-10M/tags.dat", rank)
+f = open("movieLens-20M/tags.dense.csv", "w")
 
 
 
@@ -62,6 +66,15 @@ f = open("movieLens-10M.tags.dat", "w")
 toprint = np.dot(p,np.sqrt(np.diag(d)))
 newdata = [(item,toprint[reinditem[item]]) for item in reinditem.index]
 np.set_printoptions(suppress=True)
+
+header = "_idMovie"
+for i in range(rank):
+   header += ",dim" + str(i) 
+header += "\n"
+
+f.write(header)
+
 for item in newdata:
-    f.write(str(item[0])+"::"+re.sub('[\[\]]', '', np.array2string(item[1],separator=",")).replace(" ","").replace("\n","") + "\n")
+    #f.write(str(item[0])+"::"+re.sub('[\[\]]', '', np.array2string(item[1],separator=",")).replace(" ","").replace("\n","") + "\n")
+    f.write(str(item[0])+","+re.sub('[\[\]]', '', np.array2string(item[1],separator=",")).replace(" ","").replace("\n","") + "\n")
 f.close()
