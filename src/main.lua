@@ -24,10 +24,11 @@ cmd:text('Learn SDAE network for collaborative filtering')
 cmd:text()
 cmd:text('Options')
 -- general options:
-cmd:option('-file'           , './dummy.t7'    ,  'The relative path to your data file (torch format)')
+cmd:option('-file'           , './movieLens-1M.t7'    ,  'The relative path to your data file (torch format)')
 cmd:option('-conf'           , "config.template.lua"  , 'The relative path to the lua configuration file')
 cmd:option('-seed'           , 1234                   , 'The seed')
-cmd:option('-gpu'            , 0                   , 'use gpu')
+cmd:option('-meta'           , 1                   , 'use metadata fale = 0, true 1')
+cmd:option('-gpu'            , 1                   , 'use gpu')
 cmd:text()
 
 
@@ -62,8 +63,10 @@ print(train.V.size .. " Items loaded")
 print("No Train rating : " .. train.U.noRating)
 print("No Test  rating : " .. test.U.noRating)
 
+
 SHOW_PROGRESS = true
-USE_GPU       = params.gpu > 0
+USE_GPU        = params.gpu > 0
+USE_META       = params.meta > 0
 
 if USE_GPU then
   print("Loading cunn...")
