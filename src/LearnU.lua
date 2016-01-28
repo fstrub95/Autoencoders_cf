@@ -2,7 +2,7 @@ local function trainNN(train, test, config, name)
 
    -- retrieve layer size
    local metaDim = 0
-   if config.useMetaData == true then 
+   if USE_META == true then 
       metaDim = train.info.metaDim
    end
 
@@ -23,7 +23,7 @@ local function trainNN(train, test, config, name)
    local finalNetwork
    
     local appenderIn = nil
-    if config.useMetaData == true then
+    if USE_META == true then
         appenderIn = nnsparse.AppenderIn:new()
     end
    
@@ -64,7 +64,7 @@ local function trainNN(train, test, config, name)
          --DECODERS
          decoders[i] = nn.Sequential()
          
-         if config.useMetaData then 
+         if appenderIn then 
             decoders[i]:add(nnsparse.AppenderOut(appenderIn)) 
          end
          
@@ -116,8 +116,6 @@ local function trainNN(train, test, config, name)
             end
 
 
-
-
             -- inform the trainer that data are sparse
             if k == 1 then network.isSparse = true end
 
@@ -134,9 +132,14 @@ local function trainNN(train, test, config, name)
             local newtrain = train.data
             local newtest  = test.data
             for i = 1, k-1 do
-               local batchifier = nnsparse.Batchifier(encoders[i], bottleneck[i])--, appenderIn)
-               newtrain = batchifier:forward(newtrain, 20)--, train.info)
-               newtest  = batchifier:forward(newtest, 20)--, train.info) 
+            
+               local batchifier
+               if appenderIn then batchifier = nnsparse.Batchifier (encoders[i], bottleneck[i])
+               else               batchifier = nnsparse.Batchifier2(encoders[i], bottleneck[i], appenderIn, train.info)
+               end
+                
+               newtrain = batchifier:forward(newtrain, 20)
+               newtest  = batchifier:forward(newtest, 20)
             end
 
             --Train network
@@ -170,8 +173,6 @@ local function trainNN(train, test, config, name)
    print("******** BEST RMSE = " .. bestRMSE)
    print("******** BEST MAE  = " .. bestMAE)
 
-   
-   --local estimate = finalNetwork:forward(train.data)
 
    return bestRMSE --error,estimate
 

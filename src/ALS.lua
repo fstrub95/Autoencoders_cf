@@ -257,7 +257,6 @@ cmd:text('Learn SDAE network for collaborative filtering')
 cmd:text()
 cmd:text('Options')
 
---cmd:option('-file'        , './movieLens-1M.t7'  , 'The relative path to your data file')
 cmd:option('-file'        , './movieLens-1M.t7'  , 'The relative path to your data file')
 cmd:option('-rank'        , 15                   , 'Rank of the final matrix')
 cmd:option('-lambda'      , 0.03                 , 'Regularisation')
@@ -281,11 +280,14 @@ math.randomseed(params.seed)
 --Load data
 --Load data
 print("loading data...")
-local data = torch.load(params.file)
+local data = torch.load(params.file) 
 local train = data.train
 local test  = data.test
 
 print(train.U.size .. " Users loaded")
 print(train.V.size .. " Items loaded")
 
-local U, V = pickBestAls(train, test, {params.rank}, {params.lambda})
+local U, V = pickBestAls(train, test)   
+--local U, V = pickBestAls(train, test, {params.rank}, {params.lambda})
+
+

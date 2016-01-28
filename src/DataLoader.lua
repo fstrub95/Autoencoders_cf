@@ -134,6 +134,66 @@ function DataLoader:__PostProcessRating()
 end
 
 
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+local doubanLoader, parent = torch.class('doubanLoader', 'DataLoader')
+
+function doubanLoader:LoadRatings(conf)
+
+   --no pre-process/post-processing
+   function preprocess(x)  return (x-3)/2 end
+   function postprocess(x) return 2*x+3 end
+
+   -- step 3 : load ratings
+   local ratesfile = io.open(conf.ratings, "r")
+
+   self.movieHash = {}
+   self.userHash  = {}
+
+   local itemCounter = 1
+   local userCounter = 1
+ 
+   -- Step 1 : Retrieve movies'scores...th
+   local i = 0
+   for line in ratesfile:lines() do
+
+      local userIdStr, movieIdStr, ratingStr = line:match('(%d+) (%d+) (%d+)')
+
+      local userId  = tonumber(userIdStr)
+      local itemId  = tonumber(movieIdStr)
+      local rating  = tonumber(ratingStr)
+
+      local itemIndex = self.movieHash[itemId]
+      if itemIndex == nil then
+         self.movieHash[itemId] = itemCounter
+         itemIndex   = itemCounter
+         itemCounter = itemCounter + 1
+      end
+
+      local userIndex = self.userHash[userId]
+      if userIndex == nil then
+         self.userHash[userId] = userCounter
+         userIndex   = userCounter
+         userCounter = userCounter + 1
+      end
+
+
+      rating = preprocess(rating)
+
+      self:AppendOneRating(userIndex, itemIndex, rating)
+
+      i = i + 1
+      
+      if math.fmod(i, 100000) == 0 then
+         print(i .. " ratings loaded...")
+      end
+
+   end
+   ratesfile:close()
+
+end
+
 
 ----------------------------------------------------------------------------
 ----------------------------------------------------------------------------

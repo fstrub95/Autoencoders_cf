@@ -1,9 +1,14 @@
 #!/bin/bash
 
+if [ "$#" -ne 4 ]; then
+    echo "noDataset / ratio / folder / meta"
+    exit
+fi
+
 noDataset=5
 ratio=0.8
 folder=data-${ratio}
-
+meta=${ratio}
 
 mkdir ${folder}
 mkdir ${folder}/1M
