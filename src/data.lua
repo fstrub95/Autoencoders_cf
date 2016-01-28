@@ -43,9 +43,10 @@ local dataLoader
 if     params.fileType == "movieLens" then dataLoader = movieLensLoader:new()
 elseif params.fileType == "jester"    then dataLoader = jesterLoader:new()
 elseif params.fileType == "classic"   then dataLoader = classicLoader:new()
+elseif params.fileType == "douban"    then dataLoader = doubanLoader:new()
 elseif params.fileType == "dummy"     then dataLoader = dummyLoader:new()
 else
-   error("Unknown data format, it must be :  movieLens / jester / none ")
+   error("Unknown data format, it must be :  movieLens / jester / douban / none ")
 end
 
 local train, test = dataLoader:LoadData(params.ratio,params)
