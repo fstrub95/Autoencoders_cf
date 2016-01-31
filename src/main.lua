@@ -26,9 +26,10 @@ cmd:text('Options')
 -- general options:
 cmd:option('-file'           , './movieLens-1M.t7'    ,  'The relative path to your data file (torch format)')
 cmd:option('-conf'           , "config.template.lua"  , 'The relative path to the lua configuration file')
-cmd:option('-seed'           , 1234                   , 'The seed')
-cmd:option('-meta'           , 1                   , 'use metadata fale = 0, true 1')
-cmd:option('-gpu'            , 1                   , 'use gpu')
+cmd:option('-seed'           , 0                      , 'The seed')
+cmd:option('-meta'           , 1                      , 'use metadata fale = 0, true 1')
+cmd:option('-gpu'            , 1                      , 'use gpu')
+cmd:option('-save'           , ''                     , "store the final network in an external file")
 cmd:text()
 
 
@@ -41,10 +42,10 @@ for key, val in pairs(params) do
 end
 
 
-
-torch.manualSeed(params.seed)
-math.randomseed(params.seed)
-
+if params.seed > 0 then
+   torch.manualSeed(params.seed)
+   math.randomseed(params.seed)
+end
 
 
 --Load configuration
@@ -109,7 +110,7 @@ end
 
 
 --compute neural network
-local estimate
+local network
 if configU then
 
    -- unbias U
@@ -117,7 +118,7 @@ if configU then
       u[{{}, 2}]:add(-train.U.info[k].mean) --center input
    end
 
-   _, estimate = trainU(train, test, configU)
+   rmse, network = trainU(train, test, configU)
    
 elseif configV then
 
@@ -129,8 +130,13 @@ elseif configV then
       v[{{}, 2}]:add(-train.V.info[k].mean) --center input
    end
 
-   _, estimate = trainV(train, test, configV)
+   rmse, network = trainV(train, test, configV)
 end
+
+if #params.save > 0 then
+   torch.save(params.save, network)
+end
+
 
 print("done!")
 

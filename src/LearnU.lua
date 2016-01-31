@@ -134,7 +134,7 @@ local function trainNN(train, test, config, name)
             for i = 1, k-1 do
             
                local batchifier
-               if appenderIn then batchifier = nnsparse.Batchifier (encoders[i], bottleneck[i])
+               if appenderIn == nil then batchifier = nnsparse.Batchifier (encoders[i], bottleneck[i])
                else               batchifier = nnsparse.Batchifier2(encoders[i], bottleneck[i], appenderIn, train.info)
                end
                 
@@ -174,7 +174,7 @@ local function trainNN(train, test, config, name)
    print("******** BEST MAE  = " .. bestMAE)
 
 
-   return bestRMSE --error,estimate
+   return bestRMSE, finalNetwork
 
 end
 
