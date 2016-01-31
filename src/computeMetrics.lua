@@ -302,6 +302,12 @@ if #inputs > 0 then
   end
 end
 
+rmse = math.sqrt(rmse/noSample) * 2 
+mae  = mae/noSample * 2
+
+print("Final RMSE: " .. rmse)
+print("Final MAE : " .. mae)
+
 
 --Prepare RMSE interval
 local noRatings = nnsparse.DynamicSparseTensor(10000)
@@ -317,10 +323,11 @@ noRatings = noRatings:build():ssort()
 local index = noRatings[{{},1}]
 
 
---local ignore = 0
---for kk = 1, size do
---   if transposeY[index[kk]] == nil then ignore = ignore + 1 end
---end
+local ignore = 0
+for kk = 1, size do
+   if transposeY[index[kk]] == nil then ignore = ignore + 1 end
+end
+
 print("TRANSPOSE !!!")
 
 local curRatio = 0.1
@@ -339,10 +346,10 @@ for kk = 1, index:size(1) do
    rmse         = rmse         + data:sum()
    rmseInterval = rmseInterval + data:sum()
    
-   if kk >= curRatio * size then
+   if kk >= curRatio * (size-ignore) then
         local curRmse = math.sqrt(rmse/noSample)*2
         rmseInterval  = math.sqrt(rmseInterval/noSampleInterval)*2
-        print( kk .."/" ..  size  .. "\t ratio [".. curRatio .."] : " .. curRmse .. "\t Interval [".. (curRatio - 0.1) .. "-".. curRatio .. "]: " .. rmseInterval)
+        print( kk .."/" ..  (size-ignore)  .. "\t ratio [".. curRatio .."] : " .. curRmse .. "\t Interval [".. (curRatio - 0.1) .. "-".. curRatio .. "]: " .. rmseInterval)
         curRatio = curRatio + 0.1
         rmseInterval = 0
         noSampleInterval = 0
