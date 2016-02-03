@@ -195,6 +195,39 @@ function doubanLoader:LoadRatings(conf)
 end
 
 
+function doubanLoader:LoadMetaU(conf) 
+
+  if #conf.metaUser > 0 then
+
+    local csv2tensor = require 'csv2tensor'
+    local friendTensor  = csv2tensor.load(conf.metaUser)
+
+    for i = 1, friendTensor:size(1) do
+
+      -- idUser, friends1, friends2, friends3 etc.
+      local userId  = friendTensor[i][1]
+      local friends = friendTensor[{i, {2, friendTensor:size(2)}}]
+
+      local userIndex = self.userHash[userId]
+      if userIndex ~= nil then
+        local info = self.train.U.info[userIndex] or {}
+        
+        info.friends    = friends
+
+        info.full       = friends
+        info.fullSparse = friends:sparsify(0, self.train.U.dimension)
+
+        self.train.U.info[userIndex] = info
+      end
+
+    end
+    self.train.U.info.metaDim = self.train.U.info[1].full:size(1)
+  end
+end
+
+
+
+
 ----------------------------------------------------------------------------
 ----------------------------------------------------------------------------
 

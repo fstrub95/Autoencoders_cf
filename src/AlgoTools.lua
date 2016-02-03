@@ -4,6 +4,13 @@ require("torch")
 dofile ("tools.lua")
 
 
+local AbsCriterion2 = torch.class('nn.AbsCriterion2')
+
+function AbsCriterion2:forward(x,y)
+   self.output = self.output or x.new()
+   self.output:resizeAs(x):copy(x):add(-1,y):abs()
+   return self.output:sum()
+end
 
 
 
@@ -141,7 +148,7 @@ function Batchifier2:forward(data, batchSize)
 
    --Prepare minibatch
    local inputs   = {}
-   local outputs  = data[table.Count(data)].new(nFrame, self.outputSize) 
+   local outputs  = data[1].new(nFrame, self.outputSize) 
    
    local denseInfo  = data[1].new(batchSize, self.info.metaDim):zero()
    local sparseInfo = {}
@@ -183,7 +190,9 @@ function Batchifier2:forward(data, batchSize)
       local start = nFrame-(i-1) + 1
       local stop  = nFrame
 
-      self.appenderIn:prepareInput(denseInfo[{{1, #inputs},{}}], {unpack(sparseInfo, 1, #inputs)})
+      if self.appenderIn then
+         self.appenderIn:prepareInput(denseInfo[{{1, #inputs},{}}], {unpack(sparseInfo, 1, #inputs)})
+      end
 
       outputs[{{start,stop},{}}] = self.network:forward(inputs)
    end  

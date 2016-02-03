@@ -1,36 +1,43 @@
 #!/bin/bash
 
-if [ "$#" -ne 4 ]; then
-    echo "noDataset / ratio / folder / meta"
+if [ "$#" -ne 3 ]; then
+    echo "noDataset / ratio / meta"
     exit
 fi
 
-noDataset=5
-ratio=0.8
-folder=data-${ratio}
-meta=${ratio}
+noDataset=$1
+ratio=$2
+
+folder=data-${ratio}-Meta
 
 mkdir ${folder}
 mkdir ${folder}/1M
 mkdir ${folder}/10M
 mkdir ${folder}/20M
-
+mkdir ${folder}/douban
 
 
 #movieLens-1M
-for i in `seq 1 $noDataset`
-do
-  th data.lua -ratio ${ratio} -fileType movieLens -seed ${i} -ratings ../data/movieLens/ratings-1M.dat -metaUser ../data/movieLens/users-1M.dat -metaItem ../data/movieLens/movies-1M.dat -out ${folder}/1M/${i}.t7
-done
+#for i in `seq 1 $noDataset`
+#do
+#  th data.lua -ratio ${ratio} -fileType movieLens -seed ${i} -ratings ../data/movieLens/ratings-1M.dat -metaUser ../data/movieLens/users-1M.dat -metaItem ../data/movieLens/movies-1M.dat -out ${folder}/1M/${i}.t7
+#done
 
 #movieLens-10M
-for i in `seq 1 $noDataset`
-do
-  th data.lua -ratio ${ratio} -fileType movieLens -seed ${i} -ratings ../data/movieLens-10M/ratings.dat -metaUser "" -metaItem "" -out ${folder}/10M/${i}.t7
-done
+#for i in `seq 1 $noDataset`
+#do
+#  th data.lua -ratio ${ratio} -fileType movieLens -seed ${i} -ratings ../data/movieLens-10M/ratings.dat -metaUser "" -metaItem ../data/movieLens-10M/movies.dat -tags ../data/movieLens-10M/tags.dense.csv -out ${folder}/10M/${i}.t7
+#done
 
 #movieLens-20M
+#for i in `seq 1 $noDataset`
+#do
+#  th data.lua -ratio ${ratio} -fileType movieLens -seed ${i} -ratings ../data/movieLens-20M/ratings.dat -metaUser "" -metaItem ../data/movieLens-20M/movies.dat -tags ../data/movieLens-20M/tags.dense.csv -out ${folder}/20M/${i}.t7
+#done
+
+#Douban
 for i in `seq 1 $noDataset`
 do
-  th data.lua -ratio ${ratio} -fileType movieLens -seed ${i} -ratings ../data/movieLens-20M/ratings.csv -metaUser "" -metaItem "" -out ${folder}/20M/${i}.t7
+  th data.lua -ratio ${ratio} -fileType douban -seed ${i} -ratings ../data/douban/uir.index -metaUser ../data/douban/friends.dense.csv -out ${folder}/douban/${i}.t7
 done
+

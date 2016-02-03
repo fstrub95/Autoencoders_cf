@@ -32,7 +32,7 @@ cmd:text()
 
 
 
-
+ratioStep = 0.2
 local params = cmd:parse(arg)
 
 print("Options: ")
@@ -92,18 +92,36 @@ if USE_GPU then
 end
 
 
+--compute neural network
+if params.type == "U" then
+   for k, u in pairs(train.U.data) do
+      u[{{}, 2}]:add(-train.U.info[k].mean) --center input
+   end
+else 
+   for k, v in pairs(train.V.data) do
+      train.V.info[k] = train.V.info[k] or {}     
+      train.V.info[k].mean = v[{{}, 2}]:mean()
+   
+      v[{{}, 2}]:add(-train.V.info[k].mean) --center input
+   end
+end
+
 
 
 print("Loading network...")
-local network = torch.load(params.network)
+require("cunn")
+local network = torch.load(params.network):float()
 local train   = data.train[params.type].data
 local test    = data.test [params.type].data
 local info    = data.train[params.type].info
 
+train2 = {}
+test2  = {} 
 
 -- start evaluating
 network:evaluate()
 
+print(network)
 
 --look for appenderIn
 local appenderIn
@@ -129,8 +147,8 @@ local maeFct  = nnsparse.SparseCriterion(nn.AbsCriterion())
 rmseFct.sizeAverage = false
 maeFct.sizeAverage  = false
 
-local batchSize = 3
-local curRatio = 0.1
+local batchSize = 20 
+local curRatio  = ratioStep
 local rmse, mae = 0,0
 
 --Prepare minibatch
@@ -176,7 +194,7 @@ for kk = 1, size do
   local k = index[kk]
 
   -- Focus on the prediction aspect
-  local input = train[k]
+  local input  = train[k]
   local target = test[k]
 
   -- Ignore data with no testing examples
@@ -192,14 +210,21 @@ for kk = 1, size do
     -- center the target values
     targets[i][{{}, 2}]:add(-info[k].mean)
 
+    
+    train2[#train2+1]  = inputs [i]:clone()
+    test2 [#test2 +1]  = targets[i]:clone()
+    
+
     if appenderIn then
       denseMetadata[i]  = info[k].full
       sparseMetadata[i] = info[k].fullSparse
     end
-
+    
     noSample         = noSample         + target:size(1)
     noSampleInterval = noSampleInterval + target:size(1)
     i = i + 1
+
+
 
     --compute loss when minibatch is ready
     if #inputs == batchSize then
@@ -212,7 +237,7 @@ for kk = 1, size do
       local outputs = network:forward(inputs)
 
       -- compute MAE
-      --mae = mae + maeFct:forward(outputs, targets)
+      mae = mae + maeFct:forward(outputs, targets)
 
       --compute RMSE
       local rmseCur = rmseFct:forward(outputs, targets)
@@ -225,8 +250,8 @@ for kk = 1, size do
       if kk >= curRatio * (size-ignore) then
         local curRmse = math.sqrt(rmse/noSample)*2
         rmseInterval  = math.sqrt(rmseInterval/noSampleInterval)*2
-        print( kk .."/" ..  (size-ignore)  .. "\t ratio [".. curRatio .."] : " .. curRmse .. "\t Interval [".. (curRatio - 0.1) .. "-".. curRatio .. "]: " .. rmseInterval)
-        curRatio = curRatio + 0.1
+        print( kk .."/" ..  (size-ignore)  .. "\t ratio [".. curRatio .."] : " .. curRmse .. "\t Interval [".. (curRatio - ratioStep) .. "-".. curRatio .. "]: " .. rmseInterval)
+        curRatio = curRatio + ratioStep
         rmseInterval = 0
         noSampleInterval = 0
       end
@@ -270,7 +295,7 @@ if #inputs > 0 then
 
   local outputs = network:forward(inputs)
 
-  --mae  = mae  + maeFct:forward(outputs , _targets)
+  mae  = mae  + maeFct:forward(outputs , _targets)
 
 
   local rmseCur = rmseFct:forward(outputs, _targets)
@@ -279,7 +304,7 @@ if #inputs > 0 then
 
   local curRmse  = math.sqrt(rmse/noSample )*2
   rmseInterval   = math.sqrt(rmseInterval/noSampleInterval)*2
-  print( size .."/" ..  (size-ignore)  .. "\t ratio [1.0] : " .. curRmse .. "\t Interval [0.9-1.0]: " .. rmseInterval)
+  print( (size-ignore) .."/" ..  (size-ignore)  .. "\t ratio [1.0] : " .. curRmse .. "\t Interval [0.8-1.0]: " .. rmseInterval)
   
   
   for cursor, oneTarget in pairs(_targets) do
@@ -308,6 +333,14 @@ mae  = mae/noSample * 2
 print("Final RMSE: " .. rmse)
 print("Final MAE : " .. mae)
 
+rmseFct.sizeAverage = true
+maeFct.sizeAverage  = true
+
+print("MAE FULL  : " ..             maeFct:forward(network:forward(train2), test2) *2 )
+
+
+print("RMSE FULL : " .. torch.sqrt(rmseFct:forward(network:forward(train2), test2))*2 )
+
 
 --Prepare RMSE interval
 local noRatings = nnsparse.DynamicSparseTensor(10000)
@@ -330,7 +363,7 @@ end
 
 print("TRANSPOSE !!!")
 
-local curRatio = 0.1
+local curRatio = ratioStep
 local rmse   = 0
 local rmseInterval = 0
 local noSample = 0
@@ -349,13 +382,14 @@ for kk = 1, index:size(1) do
    if kk >= curRatio * (size-ignore) then
         local curRmse = math.sqrt(rmse/noSample)*2
         rmseInterval  = math.sqrt(rmseInterval/noSampleInterval)*2
-        print( kk .."/" ..  (size-ignore)  .. "\t ratio [".. curRatio .."] : " .. curRmse .. "\t Interval [".. (curRatio - 0.1) .. "-".. curRatio .. "]: " .. rmseInterval)
-        curRatio = curRatio + 0.1
+        print( kk .."/" ..  (size-ignore)  .. "\t ratio [".. curRatio .."] : " .. curRmse .. "\t Interval [".. (curRatio - ratioStep) .. "-".. curRatio .. "]: " .. rmseInterval)
+        curRatio = curRatio + ratioStep 
         rmseInterval = 0
         noSampleInterval = 0
    end 
    
 end
+--print( (size-ignore) .."/" ..  (size-ignore)  .. "\t ratio [1.0] : " .. curRmse .. "\t Interval [0.8-1.0]: " .. rmseInterval)
 
 
 
@@ -363,8 +397,11 @@ end
 
 
 rmse = math.sqrt(rmse/noSample) * 2 
-mae  = mae/noSample * 2
       
 print("Final RMSE: " .. rmse)
-print("Final MAE : " .. mae)
+print(      "Final MAE : " .. mae)
+
+
       
+
+ 
