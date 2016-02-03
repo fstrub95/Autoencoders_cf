@@ -26,7 +26,6 @@ function AppenderOut:updateOutput(input)
 
    if inputToAppend ~= nil then
       --self.output:resize(input:size(1), input:size(2) + inputToAppend:size(2))
-
       torch.cat(self.output, input, inputToAppend, 2)
    else
       self.output = input
@@ -69,8 +68,13 @@ function AppenderSparseOut:updateOutput(input)
       
       for k, oneInput in pairs(input) do
          self.output[k] = self.output[k] or oneInput.new()
-         self.output[k]:resize(oneInput:size(1) + inputToAppend[k]:size(1) , 2)
-         torch.cat(self.output[k], oneInput, inputToAppend[k], 1)   
+         
+         if inputToAppend[k]:nDimension() > 0 then 
+            self.output[k]:resize(oneInput:size(1) + inputToAppend[k]:size(1) , 2)
+            torch.cat(self.output[k], oneInput, inputToAppend[k], 1)
+         else
+            self.output[k]:resizeAs(oneInput):copy(oneInput)
+         end
       end
    
    else

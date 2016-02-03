@@ -27,7 +27,7 @@ cmd:text('Options')
 cmd:option('-file'           , './movieLens-1M.t7'    ,  'The relative path to your data file (torch format)')
 cmd:option('-conf'           , "config.template.lua"  , 'The relative path to the lua configuration file')
 cmd:option('-seed'           , 0                      , 'The seed')
-cmd:option('-meta'           , 1                      , 'use metadata fale = 0, true 1')
+cmd:option('-meta'           , 0                      , 'use metadata fale = 0, true 1')
 cmd:option('-gpu'            , 1                      , 'use gpu')
 cmd:option('-save'           , ''                     , "store the final network in an external file")
 cmd:text()
@@ -86,6 +86,10 @@ if USE_GPU then
          _train.data[k] = _train.data[k]:cuda()
          
          if _train.info.metaDim then
+            
+            _train.info[k].full       = _train.info[k].full       or torch.Tensor(_train.info.metaDim):zero()
+            _train.info[k].fullSparse = _train.info[k].fullSparse or torch.Tensor()
+
             _train.info[k].full       = _train.info[k].full:cuda()
             _train.info[k].fullSparse = _train.info[k].fullSparse:cuda()
          end
@@ -96,6 +100,13 @@ if USE_GPU then
          _test .data[k] = _test .data[k]:cuda()
 
          if _train.info.metaDim then
+           
+            if _train.info[k] == nil or _train.info[k].full == nil then 
+              _train.info[k] = {}
+              _train.info[k].full       = torch.Tensor(_train.info.metaDim):zero()
+              _train.info[k].fullSparse = torch.Tensor()
+            end
+
             _train.info[k].full       = _train.info[k].full:cuda()
             _train.info[k].fullSparse = _train.info[k].fullSparse:cuda()
          end

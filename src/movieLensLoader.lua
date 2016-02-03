@@ -138,7 +138,7 @@ function movieLensLoader:LoadMetaU(conf)
       end
       usersfile:close()
 
-      self.train.U.info.metaDim = 2 + 7 + 21
+      self.train.U.info.metaDim = self.train.U.info[1].full:size(1)
 
    end
 
@@ -154,7 +154,7 @@ end
    "Crime",
    "Documentary",
    "Drama",
-   "Fantasy", 
+   "Fantasy",  
    "Film-Noir",
    "Horror",
    "Musical",
@@ -164,7 +164,7 @@ end
    "Thriller",
    "War",
    "Western",
-   "IMAX"
+   "IMAX",
  }
  
  
@@ -183,15 +183,15 @@ local function genreToBinary(genreStr, offset)
    local genreTable = string.split(genreStr, "|")
 
    for _,itemGenre in pairs(genreTable) do 
-      
+   
       --typo exception
       if itemGenre == "Children" then itemGenre = "Children's" end
-      
+     
       local genreIndex = genreToIndex[itemGenre]
       if genreIndex ~= nil then
         genre[genreIndex] = 1
       else
-        error("Unknow genre : " .. itemGenre)
+        print("Unknow genre : " .. itemGenre )
       end
       
    end
@@ -229,6 +229,7 @@ function movieLensLoader:LoadMetaV(conf)
       end
 
     end
+    self.train.V.info.metaDim = self.train.V.info[1].full:size(1)
   end
 
 
@@ -255,6 +256,8 @@ function movieLensLoader:LoadMetaV(conf)
                 info.genre  = genreToBinary(genreStr)
 
 
+                if #conf.tags > 0 and info.full == nil then info.full = torch.Tensor():resizeAs(self.train.V.info[1].tag):zero() end
+
                 --if there is some tags, append the genre to the tags
                 if info.full then  info.full = info.genre:cat(info.full)
                 else               info.full = info.genre
@@ -269,9 +272,7 @@ function movieLensLoader:LoadMetaV(conf)
             end
 
          else
-            local movieIdStr = line:match('(%d+)|')
-            local movieId = tonumber(movieIdStr)
-            print("unable to parse movie (".. movieId .. ") : " .. line)
+            print("unable to parse movie  : " .. line)
             self.train.V.info[movieId] = {}
          end
       end
@@ -280,9 +281,7 @@ function movieLensLoader:LoadMetaV(conf)
       
       
 
-     
-     self.train.V.info.metaDim = 18
-
+     self.train.V.info.metaDim = self.train.V.info[1].full:size(1)  
    end
 
 end

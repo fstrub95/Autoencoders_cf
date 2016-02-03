@@ -55,7 +55,6 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
    
    
    local appenderIn = sgdOpt.appenderIn
-   
    local denseMetadata  = inputs[1].new(sgdOpt.miniBatchSize, self.info.metaDim or 0)
    local sparseMetadata = {}
    
@@ -151,14 +150,15 @@ function  AutoEncoderTrainer:Test(sgdOpt)
 
    -- start evaluating
    network:evaluate()
-
+   self.curRatio = 0.1
+      
    local appenderIn = sgdOpt.appenderIn
 
    if self.isSparse then
 
       -- Configure prediction error
       local rmseFct = nnsparse.SparseCriterion(nn.MSECriterion())
-      local maeFct  = nnsparse.SparseCriterion(nn.AbsCriterion())
+      local maeFct  = nnsparse.SparseCriterion(nn.AbsCriterion()) 
 
       rmseFct.sizeAverage = false
       maeFct.sizeAverage  = false
@@ -177,9 +177,25 @@ function  AutoEncoderTrainer:Test(sgdOpt)
       local noSample = 0
 
 
-      for k, input in pairs(train) do
+      local noRatings = nnsparse.DynamicSparseTensor(10000)
+      local size = 0 
+      for k, oneTrain in pairs(train) do
+         size = size + 1
+         noRatings:append(torch.Tensor{k, oneTrain:size(1)})
+      end
+      noRatings = noRatings:build():ssort()
+   
+      local index = noRatings[{{},1}]
+
+      local rmseInterval = 0
+      local noSampleInterval = 0
+
+      --for k, input in pairs(train) do
+      for kk = 1, size do
+         local k = index[kk]
 
          -- Focus on the prediction aspect
+         local input = train[k]
          local target = test[k]
 
          -- Ignore data with no testing examples
@@ -199,7 +215,8 @@ function  AutoEncoderTrainer:Test(sgdOpt)
                sparseMetadata[i] = self.info[k].fullSparse
             end
 
-            noSample = noSample + target:size(1)
+            noSample         = noSample         + target:size(1)
+            noSampleInterval = noSampleInterval + target:size(1)
             i = i + 1
 
             --compute loss when minibatch is ready
@@ -212,14 +229,34 @@ function  AutoEncoderTrainer:Test(sgdOpt)
                
                local output = network:forward(inputs)
 
-               rmse = rmse + rmseFct:forward(output, targets)
-               --mae  = mae  + maeFct:forward(output, targets)
+
+               local rmseCur = rmseFct:forward(output, targets)
+               
+               rmse         = rmse        +  rmseCur
+               rmseInterval = rmseInterval + rmseCur
+
+               mae  = mae  + maeFct:forward(output, targets)
 
                --reset minibatch
                inputs = {}
                i = 1
-
+               
+               if kk >= self.curRatio * size then
+                  local curRmse      = math.sqrt(rmse        /noSample        )*2
+                  rmseInterval = math.sqrt(rmseInterval/noSampleInterval)*2
+                  print( kk .."/" ..  size  .. "  ratio [".. self.curRatio .."] : " .. curRmse .. "\t Interval [".. (self.curRatio - 0.1) .. "-".. self.curRatio .. "]: " .. rmseInterval)
+                  self.curRatio = self.curRatio + 0.1
+                  rmseInterval = 0
+                  noSampleInterval = 0
+               end
+               
+               --print("ratio [".. k .."] : " .. math.sqrt(rmse/noSample)*2 )
+ 
             end
+            
+         
+         else
+            --size = size - 1
          end
       end
 
@@ -237,15 +274,12 @@ function  AutoEncoderTrainer:Test(sgdOpt)
          local output = network:forward(inputs)
 
          rmse = rmse + rmseFct:forward(output, _targets)
-         --mae  = mae  + maeFct:forward(output , _targets)
+         mae  = mae  + maeFct:forward(output , _targets)
      end
 
       rmse = rmse/noSample
       mae  = mae/noSample
-
-      local w, dw = network:getParameters()
-
-
+      
 --      print("FULL : " .. 
 --      math.sqrt(
 --         rmseFct:forward(network:forward(self.train), self.test)/noSample)*2
@@ -255,8 +289,8 @@ function  AutoEncoderTrainer:Test(sgdOpt)
       -- compute reconstruction loss
       local lossFct = nn.MSECriterion()
 
-      local outputLoss = network:forward(test)
-      loss = lossFct:forward(outputLoss, test)
+      --local outputLoss = network:forward(test)
+      --loss = lossFct:forward(outputLoss, test)
    end
 
    return math.sqrt(loss), math.sqrt(rmse), mae
