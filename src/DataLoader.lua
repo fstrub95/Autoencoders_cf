@@ -53,7 +53,7 @@ function DataLoader:AppendOneRating(userId, itemId, rating)
 
 
    --store the rating in either the training or testing set
-   if math.random() < self.__ratioTraining then
+   if torch.uniform() < self.__ratioTraining then
 
       if self.train.U.data[userId] == nil then self.train.U.data[userId] = nnsparse.DynamicSparseTensor(200) end
       if self.train.V.data[itemId] == nil then self.train.V.data[itemId] = nnsparse.DynamicSparseTensor(200) end 
@@ -226,11 +226,6 @@ function doubanLoader:LoadMetaU(conf)
 end
 
 
-<<<<<<< HEAD
-=======
-
-
->>>>>>> cd903f1b5bfc1c099a7d030245316daa978f0903
 ----------------------------------------------------------------------------
 ----------------------------------------------------------------------------
 
