@@ -44,17 +44,17 @@ end
 
 -- Protected Method (helper)
 function DataLoader:AppendOneRating(userId, itemId, rating)
-
-   self.__noRating = self.__noRating + 1
-
-   --store the matrix size by keeping the max Id
-   self.__Usize = math.max(self.__Usize, userId)
-   self.__Vsize = math.max(self.__Vsize, itemId)
-
-
    --store the rating in either the training or testing set
    if torch.uniform() < self.__ratioTraining then
+      self.appendTrain(userId, itemId, rating)
+   else
+      self.appendTest(userId, itemId, rating)
+   end
+end
 
+function DataLoader:appendTrain(userId, itemId, rating)
+
+      -- bufferize sparse tensors
       if self.train.U.data[userId] == nil then self.train.U.data[userId] = nnsparse.DynamicSparseTensor(200) end
       if self.train.V.data[itemId] == nil then self.train.V.data[itemId] = nnsparse.DynamicSparseTensor(200) end 
 
@@ -62,18 +62,32 @@ function DataLoader:AppendOneRating(userId, itemId, rating)
       self.train.V.data[itemId]:append(torch.Tensor{userId,rating})
 
       --update the training mean
+      self.__noRating = self.__noRating + 1
       self.__n    =  self.__n + 1
       self.__mean = (self.__n*self.__mean + rating) / ( self.__n + 1 )
+      
+      --store the matrix size by keeping the max Id
+      self.__Usize = math.max(self.__Usize, userId)
+      self.__Vsize = math.max(self.__Vsize, itemId)
+end
 
-   else
+function DataLoader:appendTest(userId, itemId, rating)
+
+      -- bufferize sparse tensors
       if self.test.U.data[userId] == nil then self.test.U.data[userId] = nnsparse.DynamicSparseTensor.new(200) end
       if self.test.V.data[itemId] == nil then self.test.V.data[itemId] = nnsparse.DynamicSparseTensor.new(200) end 
 
       self.test.U.data[userId]:append(torch.Tensor{itemId,rating})
       self.test.V.data[itemId]:append(torch.Tensor{userId,rating})
-   end
-   
+      
+      self.__noRating = self.__noRating + 1
+
+      --store the matrix size by keeping the max Id
+      self.__Usize = math.max(self.__Usize, userId)
+      self.__Vsize = math.max(self.__Vsize, itemId)
 end
+
+
 
 
 --private method

@@ -5,8 +5,8 @@ torch.setdefaulttensortype('torch.FloatTensor')
 
 require("nnsparse")
 
-dofile ("tools.lua")
-dofile ("AlgoTools.lua")
+dofile ("../tools.lua")
+dofile ("BenchmarkTools.lua")
 
 -- ALS, implementing
 -- http://www.grappa.univ-lille3.fr/~mary/cours/stats/centrale/reco/paper/MatrixFactorizationALS.pdf
@@ -56,28 +56,21 @@ function ALS:new(trainU, trainV)
    return setmetatable(newObj, self)       
 end
 
-function ALS:init(trainU, trainV, conf)
+function ALS:init(infoU, infoV, conf)
 
    self.lambda = conf.lambda
    self.rank   = conf.rank
 
 
    -- Matrix decomposition
-   self.U = torch.Tensor(trainU.size, self.rank):uniform(-0.01, 0.01)
-   self.V = torch.Tensor(trainV.size, self.rank):uniform(-0.01, 0.01)
+   self.U = torch.Tensor(infoU.size     , self.rank):uniform(-0.01, 0.01)
+   self.V = torch.Tensor(infoV.size, self.rank):uniform(-0.01, 0.01)
   
    self.U[{{}, 1}] = 1
 --   self.V[{{}, 1}] = 1
   
 
 end
-
-
---            if self.useBias then
---               local bias = self.bias[torch.pointer(Y)][mask] -- Ybias
---               bias:add(self.bias[torch.pointer(X)][i])       -- Xbias
---               b:addmv(-1, Y_, bias)                          -- b = b - Y_*(Xbias[i] + Ybias[:])
---            end
 
   
 function ALS:eval(M)
@@ -99,8 +92,8 @@ function ALS:eval(M)
       self.A = self.A or X.new(self.rank, self.rank)
       self.b = self.b or X.new()
       
-      local mask = torch.Tensor():byte():resize(Y:size(1),1)
-
+      self.mask = self.mask or torch.Tensor():byte()
+      self.mask:resize(Y:size(1),1)
      
       for i = 1, X:size(1) do
 
@@ -114,12 +107,11 @@ function ALS:eval(M)
             local noRatedElem    = data.noRatedElem
   
             --compute mask with no memory allocation
-            mask:zero():indexFill(1, index, 1)
+            self.mask:zero():indexFill(1, index, 1)
            
-
             --move Y with no memory allocation
             self.Y_ :resize(noRatedElem, self.rank)
-            self.Y_:maskedSelect(Y, mask:expand(Y:size()))
+            self.Y_:maskedSelect(Y, self.mask:expand(Y:size()))
             
             --resize Y and its transpose to fit the problem dimension  
             self.Y_:resize(noRatedElem, self.rank)
@@ -146,104 +138,9 @@ function ALS:eval(M)
    updateVector(self.U, self.V, self.sparseRates["U"])
    updateVector(self.V, self.U, self.sparseRates["V"])
 
-   if M then
-      M:copy(self.U*self.V:t())
-   end
-
    return self.U, self.V
 
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-function pickBestAls(train, test, ranks, lambdas)
-
-
-ranks = ranks or
-{
---7,
---8,
---9,
---10,
---11,
---12,
---15,
-20
-}
-
-lambdas = lambdas or
-{
-  0.005,
-  0.01,
-  0.02,
-  0.03,
-  0.04,
-  0.05,
-  0.06,
-  0.07,
-  0.08,
-  0.09,
-  0.1,
-  0.11,
-  0.12,
-  0.15,
-  0.2,
-}
-
-
-local alsLoss = 999
-local als  = ALS:new(train["U"], train["V"])
-local alsU, alsV
-local rank, lambda
-
-
-
-for i = 1, #ranks do
-   print("[ALS] new rank: " .. ranks[i] )
-
-   for j = 1, #lambdas do
-      print("[ALS] new lambda: " .. lambdas[j] )
-
-      -- compute the ALS
-      local loss, U, V = algoTrain(train, test, als, {
-         lambda = lambdas[j],
-         rank = ranks[i]
-      })
-
-      if loss < alsLoss then
-         alsLoss = loss
-         alsU    = U
-         alsV    = V
-         rank    = ranks[i]
-         lambda  = lambdas[j]
-      end
-
-   end
-end
-
-   print("")
-   print("-----------------------------------------")
-   print("ALS loss : " .. alsLoss*2)
-   print(" - rank   = " .. rank)
-   print(" - lambda = " .. lambda)
-   print("-----------------------------------------")
-   print("")
-
-return alsU, alsV, alsLoss, rank, lambda
-
-end
-
 
 
 
@@ -253,14 +150,15 @@ end
 --
 cmd = torch.CmdLine()
 cmd:text()
-cmd:text('Learn SDAE network for collaborative filtering')
+cmd:text('ALS-wr for collaborative filtering')
+cmd:text('This Lua implementation handles medium size datset (movieLens-1/10M). We advise to use Mahout')
 cmd:text()
 cmd:text('Options')
 
 cmd:option('-file'        , './movieLens-1M.t7'  , 'The relative path to your data file')
 cmd:option('-rank'        , 15                   , 'Rank of the final matrix')
 cmd:option('-lambda'      , 0.03                 , 'Regularisation')
-cmd:option('-seed'        , 1234                 , 'The seed')
+cmd:option('-seed'        , 0                    , 'The seed')
 
 cmd:text()
 
@@ -273,21 +171,53 @@ for key, val in pairs(params) do
 end
 
 
-torch.manualSeed(params.seed)
-math.randomseed(params.seed)
+if params.seed > 0 then
+   torch.manualSeed(params.seed)
+else
+   torch.manualSeed(torch.seed())
+end
 
 
---Load data
 --Load data
 print("loading data...")
 local data = torch.load(params.file) 
 local train = data.train
 local test  = data.test
 
-print(train.U.size .. " Users loaded")
-print(train.V.size .. " Items loaded")
+print(data.train.U.info.size .. " Users loaded")
+print(data.train.V.info.size .. " Items loaded")
 
-local U, V = pickBestAls(train, test)   
---local U, V = pickBestAls(train, test, {params.rank}, {params.lambda})
+local als    = ALS:new(train["U"], train["V"])
+local rank   = params.rank
+local lambda = params.lambda
+
+-- compute the ALS
+local loss, U, V = algoTrain(train, test, als, {lambda = lambda, rank = rank })
+
+
+print("")
+print("-----------------------------------------")
+print("ALS loss : "  .. loss)
+print(" - rank   = " .. rank)
+print(" - lambda = " .. lambda)
+print("-----------------------------------------")
+print("")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

@@ -1,67 +1,6 @@
 require("nn")
 require("torch")
 
-dofile ("tools.lua")
-
-
-local AbsCriterion2 = torch.class('nn.AbsCriterion2')
-
-function AbsCriterion2:forward(x,y)
-   self.output = self.output or x.new()
-   self.output:resizeAs(x):copy(x):add(-1,y):abs()
-   return self.output:sum()
-end
-
-
-
-function algoTrain(train, test, algo, conf)
-
-   local Usize = train.U.size
-   local Vsize = train.V.size
-
-   algo:init(train.U, train.V, conf)
-
-
-   local M       = torch.Tensor(Usize, Vsize):fill(NaN)
-   local lossFct = nnsparse.SparseCriterion(nn.MSECriterion())
-   local algoLoss = 0
-
-   local bestLoss = 999
-
-   local noEpoch = conf.epoches or 15
-
-   for t = 1, noEpoch do
-
-      algo:eval(M)
-
-      local algoLoss = 0
-      local noRating = 0
-      for i, target in pairs(test.U.data) do
-            local size = target:size(1)
-            algoLoss = algoLoss + lossFct:forward(M[{i,{}}], target)*size
-            noRating = noRating + size
-      end
-      algoLoss = algoLoss / noRating
-      
-
-      print("Loss = " .. math.sqrt(algoLoss)*2)
-
-      if algoLoss > bestLoss then
-         print("early stopping")
-         break
-      else
-         bestLoss = algoLoss
-      end 
-
-   end
-
-   print("Algo loss = " .. math.sqrt(bestLoss)*2)
-   return math.sqrt(bestLoss), algo.U, algo.V
-
-end
-
-
-
 
 function FlatNetwork(network)
 
@@ -89,31 +28,6 @@ function FlatNetwork(network)
 end
 
 
-function sortSparse(X)
-   
-   local _ , index = X[{{},1}]:sort()
-   local sX = torch.Tensor():resizeAs(X)
-   
-   for k = 1, index:size(1) do
-      sX[k] = X[index[k]]   
-   end
-
-   return sX
-end
-
-
-
-local function GetnElement(X) 
-   if torch.isTensor(X)  then 
-      return X:nElement()
-   elseif torch.type(X) == "table" then 
-      local size = 0
-      for _, _ in pairs(X) do size = size + 1 end
-      return size
-   else return nil
-   end
-
-end
 
 local Batchifier2, parent = torch.class('nnsparse.Batchifier2')
 

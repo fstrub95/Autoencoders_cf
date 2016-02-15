@@ -59,7 +59,7 @@ end
 -----------------------------------------------------------]]
 function table.Count( t )
    local i = 0
-   for k in pairs( t ) do i = i + 1 end
+   for _, k in pairs( t ) do i = i + 1 end
    return i
 end
 
@@ -103,6 +103,7 @@ string.split = string.split or function(str, pat)
    return t
 end
 
+
 function GetSize(X,dim)
    if torch.isTensor(X) == false then 
       return #X
@@ -112,23 +113,14 @@ function GetSize(X,dim)
    end
 end
 
-
-
-function tensorToCsv(M, outFile)
-
-   print("This can take several minutes")
-
-   local ouputTrain = io.open(outFile, "w")
-   io.output(ouputTrain)
-   for i = 1, M:size(1) do
-      xlua.progress(i, M:size(1))
-      local line = ""
-      for j = 1, M:size(2) do
-         line = line .. M[i][j] .. " " 
-      end
-      io.write(line .. "\n")
+local function GetnElement(X) 
+   if torch.isTensor(X)  then 
+      return X:nElement()
+   elseif torch.type(X) == "table" then 
+      local size = 0
+      for _, _ in pairs(X) do size = size + 1 end
+      return size
+   else return nil
    end
-
-   io.close(ouputTrain)
-
 end
+
