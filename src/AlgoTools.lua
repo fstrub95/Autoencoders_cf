@@ -130,11 +130,9 @@ function Batchifier2:forward(data, batchSize)
    if torch.isTensor(data) then
    
       if self.appenderIn then
-         local denseInfo  = torch.Tensor():typeAs(data[1]):resize(batchSize, self.info.metaDim):zero()
+         local denseInfo  = data[1].new(self.info.size, self.info.metaDim)
          for k = 1, data:size(1) do
-            if self.info[k] then
-               denseInfo[k] = self.info[k]
-            end
+            denseInfo[k] = self.info[k] or 0
          end
          self.appenderIn:prepareInput(denseInfo)
       end
