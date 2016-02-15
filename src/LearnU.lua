@@ -1,4 +1,4 @@
-local function trainNN(train, test, config, name)
+function trainNN(train, test, config, name)
 
    -- retrieve layer size
    local metaDim = 0

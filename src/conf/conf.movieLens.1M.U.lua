@@ -1,6 +1,6 @@
 dofile("SDAECriterionGPU.lua")
 
-configU = 
+config = 
 {
    useMetadata = false,
    layer1 = 
@@ -61,3 +61,5 @@ configU =
    layer3 = nil
 
 }
+
+return config

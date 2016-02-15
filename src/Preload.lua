@@ -5,8 +5,8 @@ function LoadData(file, params)
    local use_gpu = params.gpu > 0
    local type    = params.type
    
-   if type ~= "U" or type ~= "V" then
-      error("Invalid network type : " .. type .. " . It should either be U or V")
+   if type ~= "U" and type ~= "V" then
+      error("Invalid network type : " .. type .. ". It should either be U or V")
    end 
   
    --Load data
