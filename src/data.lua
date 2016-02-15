@@ -26,9 +26,10 @@ cmd:option('-metaItem'       , ''                                 , 'The relativ
 cmd:option('-tags'           , ''                                 , 'The relative path to your tag file')
 cmd:option('-fileType'       , "movieLens"                        , 'The data file format (jester/movieLens/classic)')
 cmd:option('-out'            , "./movieLens-1M.t7"                , 'The data file format (jester/movieLens/classic)')
-cmd:option('-ratio'          , 0.8                                , 'The training ratio')
-cmd:option('-seed'           , 1234                               , 'The seed')
+cmd:option('-ratio'          , 0.9                                , 'The training ratio')
+cmd:option('-seed'           , 0                                  , 'seed')
 cmd:text()
+
 
 
 
@@ -38,6 +39,14 @@ print("Options: ")
 for key, val in pairs(params) do
    print(" - " .. key  .. "  \t : " .. tostring(val))
 end
+
+
+if params.seed > 0 then
+   torch.manualSeed(params.seed)
+else
+   torch.manualSeed(torch.initialSeed())
+end
+
 
 
 local dataLoader
