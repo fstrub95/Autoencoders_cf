@@ -147,7 +147,7 @@ function TrainNetwork(train, test, info, config)
             print(network)
 
             
-            local trainer = AutoEncoderTrainer:new(network, sgdConf, newtrain, newtest, info)
+            local trainer = AutoEncoderTrainer.new(network, sgdConf, newtrain, newtest, info)
             trainer:Execute(sgdConf)
 
             -- store loss
