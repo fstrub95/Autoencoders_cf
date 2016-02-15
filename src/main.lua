@@ -45,6 +45,8 @@ end
 if params.seed > 0 then
    torch.manualSeed(params.seed)
    math.randomseed(params.seed)
+else
+ torch.manualSeed(torch.initialSeed())
 end
 
 
