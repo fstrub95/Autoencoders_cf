@@ -12,16 +12,20 @@ function LoadData(file, params)
    --Load data
    print("Loading data from disk...")
    local data = torch.load(params.file) 
-   local train = data.train
-   local test  = data.test
+
+   -- keep only the useful data for the network
+   local train   = data.train[type].data
+   local test    = data.test [type].data
+   local info    = data.train[type].info
    
-   
-   print(train.U.size .. " Users loaded")
-   print(train.V.size .. " Items loaded")
    print("")
-   print("Training ratio   : " .. train.U.noRating / (train.U.noRating + test.U.noRating))
-   print("No Train ratings : " .. train.U.noRating)
-   print("No Test  ratings : " .. test.U.noRating)
+   print("Users loaded     : " .. data.train.U.info.size)
+   print("Items loaded     : " .. data.train.V.info.size)
+   print("")
+   print("No Train ratings : " .. data.train[type].info.noRating)
+   print("No Test  ratings : " .. data.test[type] .info.noRating)
+   print("Training ratio   : " .. data.train[type].info.noRating / (data.test[type].info.noRating + data.train[type].info.noRating))
+   print("Training densty  : " .. info.noRating / (info.size*info.dimension) )
    print("")
 
 
@@ -38,38 +42,35 @@ function LoadData(file, params)
 
 
       print("Loading data to GPU...")
-      local _train = train[type]
-      local _test  = test [type]
-
 
       --dirty code, but it does the job
       for k, _ in pairs(train[type].data) do
 
-         _train.data[k] = _train.data[k]:cuda()
+         train[k] = train[k]:cuda()
 
          -- put info on GPU
-         if _train.info.metaDim then
-            _train.info[k]            = _train.info[k]            or {}
-            _train.info[k].full       = _train.info[k].full       or torch.Tensor(_train.info.metaDim):zero():cuda()
-            _train.info[k].fullSparse = _train.info[k].fullSparse or torch.Tensor():cuda()
+         if info.metaDim then
+            info[k]            = info[k]            or {}
+            info[k].full       = info[k].full       or torch.Tensor(info.metaDim):zero():cuda()
+            info[k].fullSparse = info[k].fullSparse or torch.Tensor():cuda()
 
-            _train.info[k].full       = _train.info[k].full:cuda()
-            _train.info[k].fullSparse = _train.info[k].fullSparse:cuda()
+            info[k].full       = info[k].full:cuda()
+            info[k].fullSparse = info[k].fullSparse:cuda()
          end
       end
 
-      for k, _ in pairs(test[type].data) do
+      for k, _ in pairs(test) do
 
-         _test .data[k] = _test.data[k]:cuda()
+         test[k] = test[k]:cuda()
 
          -- put info on GPU
-         if _train.info.metaDim then
-            _train.info[k]            = _train.info[k]            or {}
-            _train.info[k].full       = _train.info[k].full       or torch.Tensor(_train.info.metaDim):zero():cuda()
-            _train.info[k].fullSparse = _train.info[k].fullSparse or torch.Tensor():cuda()
+         if train.info.metaDim then
+            info[k]            = info[k]            or {}
+            info[k].full       = info[k].full       or torch.Tensor(info.metaDim):zero():cuda()
+            info[k].fullSparse = info[k].fullSparse or torch.Tensor():cuda()
             
-            _train.info[k].full       = _train.info[k].full:cuda()
-            _train.info[k].fullSparse = _train.info[k].fullSparse:cuda()
+            info[k].full       = info[k].full:cuda()
+            info[k].fullSparse = info[k].fullSparse:cuda()
          end
 
       end
@@ -78,29 +79,24 @@ function LoadData(file, params)
 
 
    print("Unbias the data...")
+
    if type == "U" then -- unbias V
-      for k, u in pairs(train.U.data) do
-         train.U.info[k]      = train.U.info[k]      or {}     
-         train.U.info[k].mean = train.U.info[k].mean or u[{{}, 2}]:mean()
+      for k, u in pairs(train) do
+         info[k]      = info[k]      or {}     
+         info[k].mean = info[k].mean or u[{{}, 2}]:mean()
       
-         u[{{}, 2}]:add(-train.U.info[k].mean) --center input
+         u[{{}, 2}]:add(-info[k].mean) --center input
       end
    else -- unbias V
-      for k, v in pairs(train.V.data) do
-         train.V.info[k]      = train.V.info[k]      or {}     
-         train.V.info[k].mean = train.V.info[k].mean or v[{{}, 2}]:mean()
+      for k, v in pairs(train) do
+         info[k]      = info[k]      or {}     
+         info[k].mean = info[k].mean or v[{{}, 2}]:mean()
 
-         v[{{}, 2}]:add(-train.V.info[k].mean) --center input
+         v[{{}, 2}]:add(-info[k].mean) --center input
       end
    end
 
-
-   -- keep only the data usefull for the network
-   local train   = data.train[type].data
-   local test    = data.test [type].data
-   local info    = data.train[type].info
-
-   print("Data was successfully preload...")
+   print("Data was successfully preloaded...")
 
    return train, test, info
 end

@@ -119,14 +119,14 @@ function DataLoader:__PostProcessRating()
    computeBias(self.train.V, self.__mean)
 
    --Provide external information
-   self.train.U.size, self.test.U.size = self.__Usize, self.__Usize
-   self.train.V.size, self.test.V.size = self.__Vsize, self.__Vsize
+   self.train.U.info.size, self.test.U.info.size = self.__Usize, self.__Usize
+   self.train.V.info.size, self.test.V.info.size = self.__Vsize, self.__Vsize
 
-   self.train.U.dimension, self.test.U.dimension = self.__Vsize, self.__Vsize
-   self.train.V.dimension, self.test.V.dimension = self.__Usize, self.__Usize
+   self.train.U.info.dimension, self.test.U.info.dimension = self.__Vsize, self.__Vsize
+   self.train.V.info.dimension, self.test.V.info.dimension = self.__Usize, self.__Usize
    
-   self.train.U.noRating, self.test.U.noRating = self.__n, self.__noRating - self.__n
-   self.train.V.noRating, self.test.V.noRating = self.__n, self.__noRating - self.__n
+   self.train.U.info.noRating, self.test.U.info.noRating = self.__n, self.__noRating - self.__n
+   self.train.V.info.noRating, self.test.V.info.noRating = self.__n, self.__noRating - self.__n
    
    print(self.__Usize .. " users were loaded.")
    print(self.__Vsize .. " items were loaded.")

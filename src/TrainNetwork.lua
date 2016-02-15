@@ -1,13 +1,13 @@
-function trainNN(train, test, config, name)
+function TrainNetwork(train, test, info, config)
 
    -- retrieve layer size
    local metaDim = 0
-   if USE_META == true then 
-      metaDim = train.info.metaDim
+   if config.use_meta then 
+      metaDim = info.metaDim or 0
    end
 
    local bottleneck = {}
-   bottleneck[0] = train.dimension
+   bottleneck[0] = info.dimension
    local i = 1
    for key, confLayer in pairs(config) do
          if string.starts(key, "layer") then
@@ -23,7 +23,7 @@ function trainNN(train, test, config, name)
    local finalNetwork
    
     local appenderIn = nil
-    if USE_META == true then
+    if config.use_meta then
         appenderIn = nnsparse.AppenderIn:new()
     end
    
@@ -43,7 +43,7 @@ function trainNN(train, test, config, name)
                encoders[i]:add(nnsparse.AppenderSparseOut(appenderIn)) 
             end
             
-            if USE_GPU then
+            if config.use_gpu then
                encoders[i]:add(nnsparse.Densify(bottleneck[i-1] + metaDim)) 
                encoders[i]:add(      nn.Linear (bottleneck[i-1] + metaDim, bottleneck[i]))
             else
@@ -96,7 +96,7 @@ function trainNN(train, test, config, name)
             --Retrieve configuration      
             local step    = noLayer-k+1
             local sgdConf = confLayer[step]
-            sgdConf.name = name .. "." .. key .. "-" .. step 
+            sgdConf.name = key .. "-" .. step 
             
 
             --if no epoch, skip!
@@ -110,7 +110,7 @@ function trainNN(train, test, config, name)
             --Flatten network --> speedup + easier to debug
             network = FlatNetwork(network)
 
-            if USE_GPU then
+            if config.use_gpu then
                network:cuda()
                sgdConf.criterion:cuda()
             end
@@ -119,23 +119,23 @@ function trainNN(train, test, config, name)
             -- inform the trainer that data are sparse
             if k == 1 then network.isSparse = true end
 
-            -- provide input information to SDAE
+            -- provide input information to SDAE (ugly...)
             if torch.type(sgdConf.criterion) == "nnsparse.SDAECriterionGPU" then
                sgdConf.criterion.inputDim = bottleneck[k-1]
             end
             
-            -- provide metaData information
+            -- provide side information
             sgdConf.appenderIn = appenderIn
 
 
-            --compute data (can be improved)
-            local newtrain = train.data
-            local newtest  = test.data
+            --compute data for intermediate steps (can be improved)
+            local newtrain = train
+            local newtest  = test
             for i = 1, k-1 do
             
                local batchifier
                if appenderIn == nil then batchifier = nnsparse.Batchifier (encoders[i], bottleneck[i])
-               else               batchifier = nnsparse.Batchifier2(encoders[i], bottleneck[i], appenderIn, train.info)
+               else                      batchifier = nnsparse.Batchifier2(encoders[i], bottleneck[i], appenderIn, info)
                end
                 
                newtrain = batchifier:forward(newtrain, 20)
@@ -147,7 +147,7 @@ function trainNN(train, test, config, name)
             print(network)
 
             
-            local trainer = AutoEncoderTrainer:new(network, sgdConf, newtrain, newtest, train.info, train.size)
+            local trainer = AutoEncoderTrainer:new(network, sgdConf, newtrain, newtest, info)
             trainer:Execute(sgdConf)
 
             -- store loss
@@ -178,14 +178,3 @@ function trainNN(train, test, config, name)
 
 end
 
-
-
-
-
-function trainU(train, test, config)
-   return trainNN(train["U"], test["U"], config, "U")
-end
-
-function trainV(train, test, config)
-   return trainNN(train["V"], test["V"], config, "V")
-end

@@ -12,7 +12,7 @@ dofile("AlgoTools.lua")
 
 dofile("Preload.lua")
 dofile("AutoEncoderTrainer.lua")
-dofile("LearnU.lua")
+dofile("TrainNetwork.lua")
 dofile("Appender.lua")
 
 
@@ -50,13 +50,13 @@ else
 end
 
 
---use some global variable - TODO: remove
-SHOW_PROGRESS  = true
-USE_GPU        = params.gpu > 0
-
-
 print("Load training configuration...")
 local config = dofile(params.conf)
+
+--Append command line configuration
+config.use_meta       = params.meta > 0
+config.use_gpu        = params.gpu  > 0
+
 
 
 print("Load data...")
@@ -64,7 +64,7 @@ local train, test, info = LoadData(params.file, params)
 
 
 print("Training network")
-local rmse, network = trainNN(train, test, info, config)
+local rmse, network = TrainNetwork(train, test, info, config)
 
 
 if #params.save > 0 then

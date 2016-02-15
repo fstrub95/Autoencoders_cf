@@ -2,7 +2,7 @@ dofile("Tikhonov.lua")
 AutoEncoderTrainer = {}
 
 
-function AutoEncoderTrainer:new(network, conf, train, test, info, maxIndex)
+function AutoEncoderTrainer:new(network, conf, train, test, info)
 
    local newObj =
       {
@@ -12,7 +12,7 @@ function AutoEncoderTrainer:new(network, conf, train, test, info, maxIndex)
          test     = test,
          info     = info,
          isSparse = network.isSparse or false,
-         maxIndex = maxIndex,
+         maxIndex = info.size,
          rmse     = {},
          mae      = {},
       }
