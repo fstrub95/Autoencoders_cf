@@ -170,11 +170,9 @@ function  AutoEncoderTrainer:Test(sgdOpt)
       local noRatings = 0
 
 
-      --for k, input in pairs(train) do
-      for k = 1, self.info.size do
+      for k, oneInput in pairs(train) do
 
          -- Focus on the prediction aspect
-         local oneInput = train[k]
          local oneTarget = test[k]
 
          -- Ignore data with no testing examples
