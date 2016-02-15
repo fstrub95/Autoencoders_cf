@@ -109,8 +109,7 @@ end
 
 
 print("Loading network...")
-require("cunn")
-local network = torch.load(params.network):float()
+local network = torch.load(params.network)
 local train   = data.train[params.type].data
 local test    = data.test [params.type].data
 local info    = data.train[params.type].info
@@ -333,13 +332,6 @@ mae  = mae/noSample * 2
 print("Final RMSE: " .. rmse)
 print("Final MAE : " .. mae)
 
-rmseFct.sizeAverage = true
-maeFct.sizeAverage  = true
-
-print("MAE FULL  : " ..             maeFct:forward(network:forward(train2), test2) *2 )
-
-
-print("RMSE FULL : " .. torch.sqrt(rmseFct:forward(network:forward(train2), test2))*2 )
 
 
 --Prepare RMSE interval
