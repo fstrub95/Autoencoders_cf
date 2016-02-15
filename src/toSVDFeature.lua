@@ -65,31 +65,54 @@ function computeFile(samples, path)
          uLine = i .. ":1"
          vLine = j .. ":1"
 
---#the output format:rate \t number of global features \t number of user features \t number of item features \t gfid:gfvalue ... ufid:ufvalue... ifid:ifvalue...\n
-        
-         local infoU
          if allInfoU[i] and allInfoU[i].fullSparse then
-            infoU = allInfoU[i].full:sparsify(0, data.train.U.size)
-            uDim = uDim + infoU:size(1)
-           
-            for k=1, infoU:size(1) do
-               uLine = uLine .. " " .. infoU[k][1] .. ":" .. infoU[k][2]
+
+            if allInfoU[i].line == nil then
+               local infoU = allInfoU[i].full:sparsify(0, data.train.U.size) 
+
+               local oneLine = "" 
+               local dim     = 0
+               if infoU:nDimension() > 0 then
+                  dim = infoU:size(1)
+                  for k=1, infoU:size(1) do
+                     oneLine = oneLine .. " " .. infoU[k][1] .. ":" .. infoU[k][2]
+                  end
+               end
+
+               allInfoU[i].line = oneLine
+               allInfoU[i].dim  = dim
             end
-           
+            
+            uDim  = uDim + allInfoU[i].dim   
+            uLine = uLine .. " " .. allInfoU[i].line
+
          end
-        
-         local infoV
-         if allInfoV[i] and allInfoV[i].fullSparse then
-            infoV = allInfoV[j].full:sparsify(0, data.train.V.size)
-            vDim  = vDim + infoV:size(1)
-           
-            for k=1, infoV:size(1) do
-               vLine = vLine .. " " .. infoV[k][1] .. ":" .. infoV[k][2]
+
+
+         if allInfoV[j] and allInfoV[j].fullSparse then
+
+            if allInfoV[j].line == nil then
+               local infoV = allInfoV[j].full:sparsify(0, data.train.V.size) 
+
+               local oneLine = "" 
+               local dim     = 0
+               if infoV:nDimension() > 0 then
+                  dim = infoV:size(1)
+                  for k=1, infoV:size(1) do
+                     oneLine = oneLine .. " " .. infoV[k][1] .. ":" .. infoV[k][2]
+                  end
+               end
+
+               allInfoV[j].line = oneLine
+               allInfoV[j].dim  = dim
             end
+            
+            vDim  = vDim      +     allInfoV[j].dim   
+            vLine = vLine .. " " .. allInfoV[j].line
+
          end
-  
+
          line = r .. "\t0\t" .. uDim .. "\t" .. vDim .. "\t" .. uLine .. " " .. vLine
-         --print(line)
          f:write(line, "\n")
       end
    end
