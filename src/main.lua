@@ -10,6 +10,7 @@ require("nnsparse")
 
 dofile("AlgoTools.lua")
 
+dofile("Preload.lua")
 dofile("AutoEncoderTrainer.lua")
 dofile("LearnU.lua")
 dofile("Appender.lua")
@@ -24,14 +25,13 @@ cmd:text('Learn SDAE network for collaborative filtering')
 cmd:text()
 cmd:text('Options')
 -- general options:
-cmd:option('-file'           , './movieLens-1M.t7'    ,  'The relative path to your data file (torch format)')
-cmd:option('-conf'           , "config.template.lua"  , 'The relative path to the lua configuration file')
-cmd:option('-seed'           , 0                      , 'The seed')
-cmd:option('-meta'           , 0                      , 'use metadata fale = 0, true 1')
-cmd:option('-gpu'            , 1                      , 'use gpu')
-cmd:option('-save'           , ''                     , "store the final network in an external file")
+cmd:option('-file'           , './data/movieLens-1M.t7'            , 'The relative path to your data file (torch format). Please use data.lua to create such file.')
+cmd:option('-conf'           , "./config/conf.movieLens.1M.V.lua"  , 'The relative path to the lua configuration file')
+cmd:option('-seed'           , 0                                   , 'The seed. random = 0')
+cmd:option('-meta'           , 1                                   , 'use metadata false = 0, true 1')
+cmd:option('-gpu'            , 1                                   , 'use gpu. CPU = 0, GPU > 0 with GPU the index of the device')
+cmd:option('-save'           , ''                                  , "Store the final network in an external file")
 cmd:text()
-
 
 
 local params = cmd:parse(arg)
@@ -44,114 +44,35 @@ end
 
 if params.seed > 0 then
    torch.manualSeed(params.seed)
-   math.randomseed(params.seed)
 else
- torch.manualSeed(torch.initialSeed())
+   torch.manualSeed(torch.seed())
 end
 
 
---Load configuration
-dofile(params.conf)
-
-
-
---Load data
-print("loading data...")
-local data = torch.load(params.file) 
-local train = data.train
-local test  = data.test
-
-print(train.U.size .. " Users loaded")
-print(train.V.size .. " Items loaded")
-print("No Train rating : " .. train.U.noRating)
-print("No Test  rating : " .. test.U.noRating)
-
-
-SHOW_PROGRESS = true
+--use some global variable - TODO: remove
+SHOW_PROGRESS  = true
 USE_GPU        = params.gpu > 0
-USE_META       = params.meta > 0
-
-if USE_GPU then
-  print("Loading cunn...")
-  require("cunn")
-  
-  cutorch.setDevice(params.gpu)
 
 
-  print("Loading data to GPU...")
-  local function toGPU(type)
-     local _train = train[type]
-     local _test  = test [type]
-     
-     for k, _ in pairs(train[type].data) do
-     
-         _train.data[k] = _train.data[k]:cuda()
-         
-         if _train.info.metaDim then
-            
-            _train.info[k].full       = _train.info[k].full       or torch.Tensor(_train.info.metaDim):zero()
-            _train.info[k].fullSparse = _train.info[k].fullSparse or torch.Tensor()
-
-            _train.info[k].full       = _train.info[k].full:cuda()
-            _train.info[k].fullSparse = _train.info[k].fullSparse:cuda()
-         end
-     end
-     
-     for k, _ in pairs(test[type].data) do
-
-         _test .data[k] = _test .data[k]:cuda()
-
-         if _train.info.metaDim then
-           
-            if _train.info[k] == nil or _train.info[k].full == nil then 
-              _train.info[k] = {}
-              _train.info[k].full       = torch.Tensor(_train.info.metaDim):zero()
-              _train.info[k].fullSparse = torch.Tensor()
-            end
-
-            _train.info[k].full       = _train.info[k].full:cuda()
-            _train.info[k].fullSparse = _train.info[k].fullSparse:cuda()
-         end
-     end
-
-  end
-  
-  toGPU("U")
-  toGPU("V")
-  
-end
+print("Load training configuration...")
+local config = dofile(params.conf)
 
 
---compute neural network
-local network
-if configU then
+print("Load data...")
+local train, test, info = LoadData(params.file, params)
 
-   -- unbias U
-   for k, u in pairs(train.U.data) do
-      u[{{}, 2}]:add(-train.U.info[k].mean) --center input
-   end
 
-   rmse, network = trainU(train, test, configU)
-   
-elseif configV then
+print("Training network")
+local rmse, network = trainNN(train, test, info, config)
 
-   --unbias V
-   for k, v in pairs(train.V.data) do
-      train.V.info[k] = train.V.info[k] or {}     
-      train.V.info[k].mean = v[{{}, 2}]:mean()
-   
-      v[{{}, 2}]:add(-train.V.info[k].mean) --center input
-   end
-
-   rmse, network = trainV(train, test, configV)
-end
 
 if #params.save > 0 then
+   print("Saving final network on Disk...")
    torch.save(params.save, network)
 end
 
 
-print("done!")
+print("Done!!!")
 
 
 
