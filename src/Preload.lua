@@ -44,7 +44,7 @@ function LoadData(file, params)
       print("Loading data to GPU...")
 
       --dirty code, but it does the job
-      for k, _ in pairs(train[type].data) do
+      for k, _ in pairs(train) do
 
          train[k] = train[k]:cuda()
 
@@ -64,7 +64,7 @@ function LoadData(file, params)
          test[k] = test[k]:cuda()
 
          -- put info on GPU
-         if train.info.metaDim then
+         if info.metaDim then
             info[k]            = info[k]            or {}
             info[k].full       = info[k].full       or torch.Tensor(info.metaDim):zero():cuda()
             info[k].fullSparse = info[k].fullSparse or torch.Tensor():cuda()
