@@ -1,7 +1,4 @@
-dofile("Tikhonov.lua")
-
 local AutoEncoderTrainer = torch.class('AutoEncoderTrainer')
-
 
 function AutoEncoderTrainer:__init(network, conf, train, test, info)
 

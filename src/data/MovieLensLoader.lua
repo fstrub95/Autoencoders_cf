@@ -1,8 +1,4 @@
-----------------------------------------------------------------------------
-----------------------------------------------------------------------------
-
-
-local movieLensLoader, parent = torch.class('movieLensLoader', 'DataLoader')
+local movieLensLoader, parent = torch.class('cfn.movieLensLoader', 'cfn.DataLoader')
 
 function movieLensLoader:LoadRatings(conf)
 
@@ -13,16 +9,8 @@ function movieLensLoader:LoadRatings(conf)
    -- step 3 : load ratings
    local ratesfile = io.open(conf.ratings, "r")
 
-
-   self.movieHash = {}
-   self.userHash  = {}
-
-   local itemCounter = 1
-   local userCounter = 1
  
-
    -- Step 1 : Retrieve movies'scores...th
-   local i = 0
    for line in ratesfile:lines() do
 
       local userIdStr, movieIdStr, ratingStr = line:match('(%d+)::(%d+)::(%d%.?%d?)::(%d+)')
@@ -31,32 +19,12 @@ function movieLensLoader:LoadRatings(conf)
       local itemId  = tonumber(movieIdStr)
       local rating  = tonumber(ratingStr)
 
-      local itemIndex = self.movieHash[itemId]
-      if itemIndex == nil then
-         self.movieHash[itemId] = itemCounter
-         itemIndex   = itemCounter
-         itemCounter = itemCounter + 1
-      end
-
-      local userIndex = self.userHash[userId]
-      if userIndex == nil then
-         self.userHash[userId] = userCounter
-         userIndex   = userCounter
-         userCounter = userCounter + 1
-      end
-
+      local itemIndex = self:getItemIndex(itemId)
+      local userIndex = self:getUserIndex(userId)
 
       rating = preprocess(rating)
 
       self:AppendOneRating(userIndex, itemIndex, rating)
-
-      i = i + 1
-      
-      if math.fmod(i, 100000) == 0 then
-         print(i .. " ratings loaded...")
-      end
-
-
 
    end
    ratesfile:close()
@@ -113,7 +81,6 @@ function movieLensLoader:LoadMetaU(conf)
       for line in usersfile:lines() do
 
          local userIdStr, sex, age, job, ZIP = line:match('(%d+)::(%a)::(%d+)::(%d+)::(%d+)')
-         --local userIdStr, age, sex, job, ZIP = line:match('(%d+)|(%d+)|(%a)|(%a+)|(.-)') --ignore code zip since it is ill formated
 
          local userId    = tonumber(userIdStr)
          local userIndex = self.userHash[userId] 
@@ -216,7 +183,7 @@ function movieLensLoader:LoadMetaV(conf)
       local movieId = tagTensor[i][1]
       local tag     = tagTensor[{i, {2, tagTensor:size(2)}}]
 
-      local movieIndex = self.movieHash[movieId]
+      local movieIndex = self.itemHash[movieId]
       if movieIndex ~= nil then
         local info = self.train.V.info[movieIndex] or {}
         
@@ -245,7 +212,7 @@ function movieLensLoader:LoadMetaV(conf)
          if movieIdStr ~= nil then 
 
             local movieId    = tonumber(movieIdStr)     
-            local movieIndex = self.movieHash[movieId]
+            local movieIndex = self.itemHash[movieId]
 
             if movieIndex ~= nil then
                 
@@ -273,15 +240,12 @@ function movieLensLoader:LoadMetaV(conf)
 
          else
             print("unable to parse movie  : " .. line)
-            self.train.V.info[movieId] = {}
          end
       end
        
       moviesfile:close()
       
-      
-
-     self.train.V.info.metaDim = self.train.V.info[1].full:size(1)  
+      self.train.V.info.metaDim = self.train.V.info[1].full:size(1)  
    end
 
 end

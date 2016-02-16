@@ -84,7 +84,7 @@ function TrainNetwork(train, test, info, config)
    local error = {rmse = {}, mae = {}}
    
 
-   --Step 2 : train networks  - Stacked Autoencoder algorithm
+   --Step 2 : train networks  - Stacked Autoencoders
    local noLayer = 0
    for key, confLayer in pairs(config) do
 
@@ -119,10 +119,12 @@ function TrainNetwork(train, test, info, config)
             -- inform the trainer that data are sparse
             if k == 1 then network.isSparse = true end
 
+
             -- provide input information to SDAE (ugly...)
             if torch.type(sgdConf.criterion) == "nnsparse.SDAECriterionGPU" then
                sgdConf.criterion.inputDim = bottleneck[k-1]
             end
+            
             
             -- provide side information
             sgdConf.appenderIn = appenderIn
@@ -133,10 +135,7 @@ function TrainNetwork(train, test, info, config)
             local newtest  = test
             for i = 1, k-1 do
             
-               local batchifier
-               if appenderIn == nil then batchifier = nnsparse.Batchifier (encoders[i], bottleneck[i])
-               else                      batchifier = nnsparse.Batchifier2(encoders[i], bottleneck[i], appenderIn, info)
-               end
+               local batchifier = cfn.Batchifier(encoders[i], bottleneck[i], appenderIn, info)
                 
                newtrain = batchifier:forward(newtrain, 20)
                newtest  = batchifier:forward(newtest, 20)

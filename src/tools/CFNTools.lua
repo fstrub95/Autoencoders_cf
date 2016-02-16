@@ -2,7 +2,10 @@ require("nn")
 require("torch")
 
 
-function FlatNetwork(network)
+cfn = cfn or {}
+
+
+function cfn.FlatNetwork(network)
 
    function FlatNetworkRecursive(network, layers)
       for i = 1, network:size() do
@@ -29,16 +32,16 @@ end
 
 
 
-local Batchifier2, parent = torch.class('nnsparse.Batchifier2')
+local Batchifier, parent = torch.class('cfn.Batchifier')
 
-function Batchifier2:__init(network, outputSize, appenderIn, info)
+function Batchifier:__init(network, outputSize, appenderIn, info)
    self.network    = network
    self.outputSize = outputSize
    self.appenderIn = appenderIn
    self.info = info
 end
 
-function Batchifier2:forward(data, batchSize)
+function Batchifier:forward(data, batchSize)
    
    -- no need for batch for dense Tensor
    if torch.isTensor(data) then

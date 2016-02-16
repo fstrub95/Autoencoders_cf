@@ -8,13 +8,14 @@ torch.setdefaulttensortype('torch.FloatTensor')
 
 require("nnsparse")
 
-dofile("AlgoTools.lua")
 
-dofile("Preload.lua")
-dofile("AutoEncoderTrainer.lua")
-dofile("TrainNetwork.lua")
-dofile("Appender.lua")
 
+dofile("misc/Preload.lua")
+dofile("misc/AutoEncoderTrainer.lua")
+dofile("misc/TrainNetwork.lua")
+
+dofile("tools/Appender.lua")
+dofile("tools/CFNTools.lua")
 
 ----------------------------------------------------------------------
 -- parse command-line options

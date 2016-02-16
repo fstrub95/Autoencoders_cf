@@ -1,4 +1,5 @@
-local SDAECriterionGPU, parent = torch.class('nnsparse.SDAECriterionGPU', 'nn.Criterion')
+cfn = cfn or {}
+local SDAECriterionGPU, parent = torch.class('cfn.SDAECriterionGPU', 'nn.Criterion')
 
 function SDAECriterionGPU:__init(criterion, SDAEconf, inputSize)
    parent.__init(self)

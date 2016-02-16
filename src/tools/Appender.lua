@@ -1,4 +1,8 @@
-local AppenderIn, parent = torch.class('nnsparse.AppenderIn')
+cfn = cfn or {}
+
+
+
+local AppenderIn, parent = torch.class('cfn.AppenderIn')
 
 function AppenderIn:prepareInput(denseInput, sparseInput)
    self.input       = denseInput
@@ -7,7 +11,7 @@ end
 
 
 
-local AppenderOut, parent = torch.class('nnsparse.AppenderOut', 'nn.Module')
+local AppenderOut, parent = torch.class('cfn.AppenderOut', 'nn.Module')
 
 function AppenderOut:__init(appenderIn)
    parent:__init()
@@ -40,7 +44,7 @@ function AppenderOut:updateGradInput(input, gradOutput)
 end
 
 
-local AppenderSparseOut, parent = torch.class('nnsparse.AppenderSparseOut', 'nn.Module')
+local AppenderSparseOut, parent = torch.class('cfn.AppenderSparseOut', 'nn.Module')
 
 function AppenderSparseOut:__init(appenderIn, offset)
    parent:__init()
@@ -88,6 +92,6 @@ function AppenderSparseOut:updateGradInput(input, gradOutput)
    return nil --return gradOutput:resize(self.prevSize) -- truncate the added input
 end
 
-local    AppenderDummy, parent = torch.class('nnsparse.AppenderDummy')
+local    AppenderDummy, parent = torch.class('cfn.AppenderDummy')
 function AppenderDummy:prepareInput() end
 

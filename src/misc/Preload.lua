@@ -1,5 +1,3 @@
-
-
 function LoadData(file, params)
 
    local use_gpu = params.gpu > 0

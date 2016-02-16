@@ -1,15 +1,20 @@
 require("sys")
 require("torch")
-dofile ("tools.lua")
 
 torch.setdefaulttensortype('torch.FloatTensor') 
 
 require("nnsparse")
 
-dofile("DataLoader.lua")
-dofile("movieLensLoader.lua")
+dofile("data/DataLoader.lua")
 
+dofile("data/MovieLensLoader.lua")
+dofile("data/DoubanLoader.lua")
+dofile("data/DummyLoader.lua")
+dofile("data/JesterLoader.lua")
+dofile("data/TemplateLoader.lua")
+dofile("data/ClassicLoader.lua")
 
+dofile ("tools/LuaTools.lua")
 
 ----------------------------------------------------------------------
 -- parse command-line options
@@ -50,11 +55,11 @@ end
 
 
 local dataLoader
-if     params.fileType == "movieLens" then dataLoader = movieLensLoader:new()
-elseif params.fileType == "jester"    then dataLoader = jesterLoader:new()
-elseif params.fileType == "classic"   then dataLoader = classicLoader:new()
-elseif params.fileType == "douban"    then dataLoader = doubanLoader:new()
-elseif params.fileType == "dummy"     then dataLoader = dummyLoader:new()
+if     params.fileType == "movieLens" then dataLoader = cfn.movieLensLoader:new()
+elseif params.fileType == "jester"    then dataLoader = cfn.jesterLoader:new()
+elseif params.fileType == "classic"   then dataLoader = cfn.classicLoader:new()
+elseif params.fileType == "douban"    then dataLoader = cfn.doubanLoader:new()
+elseif params.fileType == "dummy"     then dataLoader = cfn.dummyLoader:new()
 else
    error("Unknown data format, it must be :  movieLens / jester / douban / none ")
 end
