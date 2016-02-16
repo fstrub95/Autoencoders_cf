@@ -1,4 +1,4 @@
-local jesterLoader, parent = torch.class('cfn.jesterLoader', 'cfn.DataLoader')
+local jesterLoader, parent = torch.class('jesterLoader', 'DataLoader')
 
 function jesterLoader:LoadRatings(conf)
 

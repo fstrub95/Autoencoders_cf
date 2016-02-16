@@ -8,8 +8,6 @@ torch.setdefaulttensortype('torch.FloatTensor')
 
 require("nnsparse")
 
-
-
 dofile("misc/Preload.lua")
 dofile("misc/AutoEncoderTrainer.lua")
 dofile("misc/TrainNetwork.lua")
