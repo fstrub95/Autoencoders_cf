@@ -10,7 +10,6 @@ dofile("data/DataLoader.lua")
 dofile("data/MovieLensLoader.lua")
 dofile("data/DoubanLoader.lua")
 dofile("data/DummyLoader.lua")
-dofile("data/JesterLoader.lua")
 dofile("data/TemplateLoader.lua")
 dofile("data/ClassicLoader.lua")
 
@@ -29,8 +28,8 @@ cmd:option('-ratings'        , '../data/movieLens/ratings-1M.dat' , 'The relativ
 cmd:option('-metaUser'       , ''                                 , 'The relative path to your metadata file for users')
 cmd:option('-metaItem'       , ''                                 , 'The relative path to your metadata file for items')
 cmd:option('-tags'           , ''                                 , 'The relative path to your tag file')
-cmd:option('-fileType'       , "movieLens"                        , 'The data file format (jester/movieLens/classic)')
-cmd:option('-out'            , "./movieLens-1M.t7"                , 'The data file format (jester/movieLens/classic)')
+cmd:option('-fileType'       , "movieLens"                        , 'The data file format (movieLens/douban/classic)')
+cmd:option('-out'            , "./movieLens-1M.t7"                , 'The data file format (movieLens/douban/classic)')
 cmd:option('-ratio'          , 0.9                                , 'The training ratio')
 cmd:option('-seed'           , 0                                  , 'seed')
 cmd:text()
@@ -56,12 +55,11 @@ end
 
 local dataLoader
 if     params.fileType == "movieLens" then dataLoader = cfn.movieLensLoader:new()
-elseif params.fileType == "jester"    then dataLoader = cfn.jesterLoader:new()
 elseif params.fileType == "classic"   then dataLoader = cfn.classicLoader:new()
 elseif params.fileType == "douban"    then dataLoader = cfn.doubanLoader:new()
 elseif params.fileType == "dummy"     then dataLoader = cfn.dummyLoader:new()
 else
-   error("Unknown data format, it must be :  movieLens / jester / douban / none ")
+   error("Unknown data format, it must be :  movieLens / douban / classic  ")
 end
 
 local train, test = dataLoader:LoadData(params.ratio,params)

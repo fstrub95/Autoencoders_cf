@@ -12,8 +12,11 @@ dofile("misc/Preload.lua")
 dofile("misc/AutoEncoderTrainer.lua")
 dofile("misc/TrainNetwork.lua")
 
+
 dofile("tools/Appender.lua")
+dofile("tools/SDAECriterionGPU.lua")
 dofile("tools/CFNTools.lua")
+dofile("tools/LuaTools.lua")
 
 ----------------------------------------------------------------------
 -- parse command-line options
@@ -24,13 +27,13 @@ cmd:text('Learn SDAE network for collaborative filtering')
 cmd:text()
 cmd:text('Options')
 -- general options:
-cmd:option('-file'           , './data/movieLens-10M.t7'         , 'The relative path to your data file (torch format). Please use data.lua to create such file.')
-cmd:option('-conf'           , "./conf/conf.movieLens.10M.V.lua" , 'The relative path to the lua configuration file')
-cmd:option('-seed'           , 0                                 , 'The seed. random = 0')
-cmd:option('-meta'           , 1                                 , 'use metadata false = 0, true 1')
-cmd:option('-type'           , 'V'                               , 'Pick either the U/V Autoencoder.')
-cmd:option('-gpu'            , 1                                 , 'use gpu. CPU = 0, GPU > 0 with GPU the index of the device')
-cmd:option('-save'           , ''                                , "Store the final network in an external file")
+cmd:option('-file'           , '../data/movieLens-10M.t7'         , 'The relative path to your data file (torch format). Please use data.lua to create such file.')
+cmd:option('-conf'           , "../conf/conf.movieLens.10M.V.lua" , 'The relative path to the lua configuration file')
+cmd:option('-seed'           , 0                                  , 'The seed. random = 0')
+cmd:option('-meta'           , 1                                  , 'use metadata false = 0, true 1')
+cmd:option('-type'           , 'V'                                , 'Pick either the U/V Autoencoder.')
+cmd:option('-gpu'            , 1                                  , 'use gpu. CPU = 0, GPU > 0 with GPU the index of the device')
+cmd:option('-save'           , ''                                 , "Store the final network in an external file")
 cmd:text()
 
 

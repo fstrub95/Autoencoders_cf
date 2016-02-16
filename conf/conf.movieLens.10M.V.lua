@@ -1,5 +1,3 @@
-dofile("SDAECriterionGPU.lua")
-
 config = 
 {
    useMetadata = false,
@@ -7,7 +5,7 @@ config =
    {      
       layerSize = 770,
       { 
-         criterion = nnsparse.SDAECriterionGPU(nn.MSECriterion(),
+         criterion = cfn.SDAECriterionGPU(nn.MSECriterion(),
          {
             alpha = 0.91210902705444,
             beta  = 0.54054440256139,

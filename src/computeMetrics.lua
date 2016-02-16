@@ -7,12 +7,8 @@ torch.setdefaulttensortype('torch.FloatTensor')
 
 require("nnsparse")
 
-dofile("AlgoTools.lua")
-
-dofile("AutoEncoderTrainer.lua")
-dofile("SDAECriterionGPU.lua")
-dofile("LearnU.lua")
-dofile("Appender.lua")
+dofile("tools/CFNTools.lua")
+dofile("tools/Appender.lua")
 
 
 ----------------------------------------------------------------------

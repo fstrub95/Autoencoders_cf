@@ -24,7 +24,7 @@ function TrainNetwork(train, test, info, config)
    
     local appenderIn = nil
     if config.use_meta then
-        appenderIn = nnsparse.AppenderIn:new()
+        appenderIn = cfn.AppenderIn:new()
     end
    
    
@@ -40,7 +40,7 @@ function TrainNetwork(train, test, info, config)
          if i == 1  then --sparse input
          
             if appenderIn then
-               encoders[i]:add(nnsparse.AppenderSparseOut(appenderIn)) 
+               encoders[i]:add(cfn.AppenderSparseOut(appenderIn)) 
             end
             
             if config.use_gpu then
@@ -53,7 +53,7 @@ function TrainNetwork(train, test, info, config)
          else --dense input
          
             if appenderIn then 
-               encoders[i]:add(nnsparse.AppenderOut(appenderIn)) 
+               encoders[i]:add(cfn.AppenderOut(appenderIn)) 
             end
             
             encoders[i]:add(nn.Linear(bottleneck[i-1] + metaDim, bottleneck[i]))
@@ -65,7 +65,7 @@ function TrainNetwork(train, test, info, config)
          decoders[i] = nn.Sequential()
          
          if appenderIn then 
-            decoders[i]:add(nnsparse.AppenderOut(appenderIn)) 
+            decoders[i]:add(cfn.AppenderOut(appenderIn)) 
          end
          
          decoders[i]:add(nn.Linear(bottleneck[i] + metaDim ,bottleneck[i-1]))
@@ -108,7 +108,7 @@ function TrainNetwork(train, test, info, config)
             for i = noLayer, k      , -1 do network:add(decoders[i]) end
 
             --Flatten network --> speedup + easier to debug
-            network = FlatNetwork(network)
+            network = cfn.FlatNetwork(network)
 
             if config.use_gpu then
                network:cuda()
@@ -121,7 +121,7 @@ function TrainNetwork(train, test, info, config)
 
 
             -- provide input information to SDAE (ugly...)
-            if torch.type(sgdConf.criterion) == "nnsparse.SDAECriterionGPU" then
+            if torch.type(sgdConf.criterion) == "cfn.SDAECriterionGPU" then
                sgdConf.criterion.inputDim = bottleneck[k-1]
             end
             
