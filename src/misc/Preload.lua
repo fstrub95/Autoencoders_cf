@@ -17,13 +17,13 @@ function LoadData(file, params)
    local info    = data.train[type].info
    
    print("")
-   print("Users loaded     : " .. data.train.U.info.size)
-   print("Items loaded     : " .. data.train.V.info.size)
+   print("Users loaded      : " .. data.train.U.info.size)
+   print("Items loaded      : " .. data.train.V.info.size)
    print("")
-   print("No Train ratings : " .. data.train[type].info.noRating)
-   print("No Test  ratings : " .. data.test[type] .info.noRating)
-   print("Training ratio   : " .. data.train[type].info.noRating / (data.test[type].info.noRating + data.train[type].info.noRating))
-   print("Training densty  : " .. info.noRating / (info.size*info.dimension) )
+   print("No Train ratings  : " .. data.train[type].info.noRating)
+   print("No Test  ratings  : " .. data.test[type] .info.noRating)
+   print("Training ratio    : " .. data.train[type].info.noRating / (data.test[type].info.noRating + data.train[type].info.noRating))
+   print("Training density  : " .. info.noRating / (info.size*info.dimension) )
    print("")
 
 
@@ -40,9 +40,7 @@ function LoadData(file, params)
 
 
       print("Loading data to GPU...")
-
-      --dirty code, but it does the job
-      for k, _ in pairs(train) do
+      for k, _ in pairs(train) do      --dirty code, but it does the job
 
          train[k] = train[k]:cuda()
 
@@ -70,9 +68,7 @@ function LoadData(file, params)
             info[k].full       = info[k].full:cuda()
             info[k].fullSparse = info[k].fullSparse:cuda()
          end
-
       end
-
    end   
 
 

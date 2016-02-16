@@ -9,7 +9,7 @@ require("nnsparse")
 
 dofile("tools/CFNTools.lua")
 dofile("tools/Appender.lua")
-
+dofile("misc/Preload.lua")
 
 ----------------------------------------------------------------------
 -- parse command-line options
@@ -24,11 +24,16 @@ cmd:option('-file'              , ''  ,  'The relative path to your data file (t
 cmd:option('-network'           , ""  , 'The relative path to the lua configuration file')
 cmd:option('-type'              , ""  , 'The network type U/V')
 cmd:option('-gpu'               , 1   , 'use gpu')
+cmd:option('-ratioStep'         , 0.2   , 'use gpu')
 cmd:text()
 
 
 
-ratioStep = 0.2
+--the following code was not clean... sorry for that!
+
+
+
+local ratioStep = 0.2
 local params = cmd:parse(arg)
 
 print("Options: ")
@@ -36,93 +41,25 @@ for key, val in pairs(params) do
   print(" - " .. key  .. "  \t : " .. tostring(val))
 end
 
+local ratioStep = params.ratioStep
 
 --Load data
 print("Loading data...")
-local data = torch.load(params.file) 
-local train = data.train
-local test  = data.test
+local train, test, info = LoadData(params.file, params)
 
-print(train.U.size .. " Users loaded")
-print(train.V.size .. " Items loaded")
-print("No Train rating : " .. train.U.noRating)
-print("No Test  rating : " .. test.U.noRating)
-
-
-SHOW_PROGRESS = true
-USE_GPU        = params.gpu > 0
-
-
-if USE_GPU then
-  print("Loading cunn...")
-  require("cunn")
-
-  cutorch.setDevice(params.gpu)
-  
-  print("Loading data to GPU...")
-  local type = params.type
-  local _train = train[type]
-  local _test  = test [type]
-
-  for k, _ in pairs(train[type].data) do
-
-    _train.data[k] = _train.data[k]:cuda()
-
-    if _train.info.metaDim then
-      _train.info[k].full       = _train.info[k].full:cuda()
-      _train.info[k].fullSparse = _train.info[k].fullSparse:cuda()
-    end
-  end
-
-  for k, _ in pairs(test[type].data) do
-
-    _test .data[k] = _test .data[k]:cuda()
-
-    if _train.info.metaDim then
-      _train.info[k].full       = _train.info[k].full:cuda()
-      _train.info[k].fullSparse = _train.info[k].fullSparse:cuda()
-    end
-  end
-
-
-end
-
-
---compute neural network
-if params.type == "U" then
-   for k, u in pairs(train.U.data) do
-      u[{{}, 2}]:add(-train.U.info[k].mean) --center input
-   end
-else 
-   for k, v in pairs(train.V.data) do
-      train.V.info[k] = train.V.info[k] or {}     
-      train.V.info[k].mean = v[{{}, 2}]:mean()
-   
-      v[{{}, 2}]:add(-train.V.info[k].mean) --center input
-   end
-end
-
-
-
-print("Loading network...")
-local network = torch.load(params.network)
-local train   = data.train[params.type].data
-local test    = data.test [params.type].data
-local info    = data.train[params.type].info
-
-train2 = {}
-test2  = {} 
 
 -- start evaluating
+print("Loading network...")
+local network = torch.load(params.network)
 network:evaluate()
-
 print(network)
+
 
 --look for appenderIn
 local appenderIn
 for k = 1, network:size() do
   local layer = network:get(k)
-  if torch.type(layer) == "nnsparse.AppenderOut" then
+  if torch.type(layer) == "cfn.AppenderOut" then
     appenderIn = layer.appenderIn
     print("AppenderIn found")
     break
@@ -130,8 +67,26 @@ for k = 1, network:size() do
 end
 
 
-inf = 1/0
 
+
+
+
+--Sort samples by their number of ratings 
+local noRatings = nnsparse.DynamicSparseTensor(10000)
+local size = 0
+for k, oneTrain in pairs(train) do
+  size = size + 1
+  noRatings:append(torch.Tensor{k, oneTrain:size(1)})
+end
+noRatings = noRatings:build():ssort()
+local sortedIndex = noRatings[{{},1}]
+
+
+-- compute the number of valid training samples
+local ignore = 0
+for kk = 1, size do
+   if train[sortedIndex[kk]] == nil then ignore = ignore + 1 end
+end
 
 
 
@@ -146,6 +101,98 @@ local batchSize = 20
 local curRatio  = ratioStep
 local rmse, mae = 0,0
 
+
+
+
+
+--this method compute the error with the sparse matrix 
+local transposeError = {}
+function computeTranspose(outputs, targets, reverseIndex)
+   for cursor, oneTarget in pairs(targets) do
+       local i = reverseIndex[cursor]
+   
+       for k = 1, oneTarget:size(1) do
+   
+         local j = oneTarget[k][1]
+   
+         local y = outputs[cursor][j]
+         local t = oneTarget[k][2]
+   
+         local mse = ( y - t )^2
+   
+         local transpose = transposeError[j] or nnsparse.DynamicSparseTensor(500)
+         transpose:append(torch.Tensor{i, mse})
+         transposeError[j] = transpose
+   
+       end
+     end
+end
+
+function computeTranposeRatio(transposeError)
+
+   --Sort samples by number of ratings
+   local noRatings = nnsparse.DynamicSparseTensor(10000)
+   local size  = 0
+   for k, oneTranspose in pairs(transposeError) do
+     transposeError[k] = oneTranspose:build():ssortByIndex()
+     oneTranspose  = transposeError[k]
+     size = size + 1
+     noRatings:append(torch.Tensor{k, oneTranspose:size(1)})
+   end
+   
+   noRatings = noRatings:build():ssort()
+   local index = noRatings[{{},1}]
+   
+   
+   local ignore = 0
+   for kk = 1, size do
+      if transposeError[index[kk]] == nil then ignore = ignore + 1 end
+   end
+   
+   print("TRANSPOSE !!!")
+   
+   local curRatio = ratioStep
+   local rmse   = 0
+   local rmseInterval = 0
+   local noSample = 0
+   local noSampleInterval = 0
+   
+   for kk = 1, index:size(1) do
+      local k    = index[kk]
+      local data = transposeError[k][{{}, 2}]
+      
+      noSample         = noSample         + data:size(1)
+      noSampleInterval = noSampleInterval + data:size(1)
+      
+      rmse         = rmse         + data:sum()
+      rmseInterval = rmseInterval + data:sum()
+      
+      if kk >= curRatio * (size-ignore) then
+           local curRmse = math.sqrt(rmse/noSample)*2
+           rmseInterval  = math.sqrt(rmseInterval/noSampleInterval)*2
+           print( kk .."/" ..  (size-ignore)  .. "\t ratio [".. curRatio .."] : " .. curRmse .. "\t Interval [".. (curRatio - ratioStep) .. "-".. curRatio .. "]: " .. rmseInterval)
+           curRatio = curRatio + ratioStep 
+           rmseInterval = 0
+           noSampleInterval = 0
+      end 
+      
+   end
+   
+   rmse = math.sqrt(rmse/noSample) * 2 
+   
+   print("Final RMSE: " .. rmse)
+
+end
+
+
+
+
+
+local i = 1
+local noSample = 0
+local rmseInterval = 0
+local noSampleInterval = 0
+
 --Prepare minibatch
 local inputs  = {}
 local targets = {}
@@ -155,38 +202,12 @@ local denseMetadata  = train[1].new(batchSize, info.metaDim or 0)
 local sparseMetadata = {}
 
 
-local i = 1
-local noSample = 0
-
---Prepare RMSE interval
-local noRatings = nnsparse.DynamicSparseTensor(10000)
-local size = 0
-for k, oneTrain in pairs(train) do
-  size = size + 1
-  noRatings:append(torch.Tensor{k, oneTrain:size(1)})
-end
-noRatings = noRatings:build():ssort()
-local index = noRatings[{{},1}]
-
-local rmseInterval = 0
-local noSampleInterval = 0
-
-local transposeY = {}
-
-local ignore = 0
-for kk = 1, size do
-   if train[index[kk]] == nil then ignore = ignore + 1 end
-end
-
-
-local reverseIndex = {}
-
-
 ------------MAIN!!!
+local reverseIndex = {}
 
 --for k, input in pairs(train) do
 for kk = 1, size do
-  local k = index[kk]
+  local k = sortedIndex[kk]
 
   -- Focus on the prediction aspect
   local input  = train[k]
@@ -195,8 +216,10 @@ for kk = 1, size do
   -- Ignore data with no testing examples
   if target ~= nil then
 
+    -- keep the original index
     reverseIndex[i] = k
 
+    
     inputs[i]  = input
 
     targets[i] = targets[i] or target.new()
@@ -204,11 +227,6 @@ for kk = 1, size do
 
     -- center the target values
     targets[i][{{}, 2}]:add(-info[k].mean)
-
-    
-    train2[#train2+1]  = inputs [i]:clone()
-    test2 [#test2 +1]  = targets[i]:clone()
-    
 
     if appenderIn then
       denseMetadata[i]  = info[k].full
@@ -242,40 +260,31 @@ for kk = 1, size do
       --reset minibatch
       inputs = {}
       i = 1
+      
+      -- if the ratio
       if kk >= curRatio * (size-ignore) then
+      
         local curRmse = math.sqrt(rmse/noSample)*2
         rmseInterval  = math.sqrt(rmseInterval/noSampleInterval)*2
+        
         print( kk .."/" ..  (size-ignore)  .. "\t ratio [".. curRatio .."] : " .. curRmse .. "\t Interval [".. (curRatio - ratioStep) .. "-".. curRatio .. "]: " .. rmseInterval)
+        
+        -- increment next ratio
         curRatio = curRatio + ratioStep
-        rmseInterval = 0
+        
+        -- reset interval
+        rmseInterval     = 0
         noSampleInterval = 0
       end
-
-      for cursor, oneTarget in pairs(targets) do
-         local i = reverseIndex[cursor]
-
-         for k = 1, oneTarget:size(1) do
-
-            local j = oneTarget[k][1]
-         
-            local y = outputs[cursor][j]
-            local t = oneTarget[k][2]
-            
-            local mse = ( y - t )^2
-
-            local transpose = transposeY[j] or nnsparse.DynamicSparseTensor(500)
-            transpose:append(torch.Tensor{i, mse})
-            transposeY[j] = transpose
-
-         end
-      end
+      
+      
+      computeTranspose(outputs, targets, reverseIndex)
       reverseIndex = {}
 
     end
 
   end
 end
-
 
 -- remaining data for minibatch
 if #inputs > 0 then
@@ -299,95 +308,27 @@ if #inputs > 0 then
 
   local curRmse  = math.sqrt(rmse/noSample )*2
   rmseInterval   = math.sqrt(rmseInterval/noSampleInterval)*2
-  print( (size-ignore) .."/" ..  (size-ignore)  .. "\t ratio [1.0] : " .. curRmse .. "\t Interval [0.8-1.0]: " .. rmseInterval)
+
+  computeTranspose(outputs, _targets, reverseIndex)
   
   
-  for cursor, oneTarget in pairs(_targets) do
-    local i = reverseIndex[cursor]
-
-    for k = 1, oneTarget:size(1) do
-
-      local j = oneTarget[k][1]
-
-      local y = outputs[cursor][j]
-      local t = oneTarget[k][2]
-
-      local mse = ( y - t )^2
-
-      local transpose = transposeY[j] or nnsparse.DynamicSparseTensor(500)
-      transpose:append(torch.Tensor{i, mse})
-      transposeY[j] = transpose
-
-    end
-  end
 end
+
+
 
 rmse = math.sqrt(rmse/noSample) * 2 
 mae  = mae/noSample * 2
+
+print( (size-ignore) .."/" ..  (size-ignore)  .. "\t ratio [1.0] : " .. rmse .. "\t Interval [0.8-1.0]: " .. rmseInterval)
 
 print("Final RMSE: " .. rmse)
 print("Final MAE : " .. mae)
 
 
 
---Prepare RMSE interval
-local noRatings = nnsparse.DynamicSparseTensor(10000)
-local size  = 0
-for k, oneTranspose in pairs(transposeY) do
-  transposeY[k] = oneTranspose:build():ssortByIndex()
-  oneTranspose  = transposeY[k]
-  size = size + 1
-  noRatings:append(torch.Tensor{k, oneTranspose:size(1)})
-end
-
-noRatings = noRatings:build():ssort()
-local index = noRatings[{{},1}]
+computeTranposeRatio(transposeError)
 
 
-local ignore = 0
-for kk = 1, size do
-   if transposeY[index[kk]] == nil then ignore = ignore + 1 end
-end
-
-print("TRANSPOSE !!!")
-
-local curRatio = ratioStep
-local rmse   = 0
-local rmseInterval = 0
-local noSample = 0
-local noSampleInterval = 0
-
-for kk = 1, index:size(1) do
-   local k    = index[kk]
-   local data = transposeY[k][{{}, 2}]
-   
-   noSample         = noSample         + data:size(1)
-   noSampleInterval = noSampleInterval + data:size(1)
-   
-   rmse         = rmse         + data:sum()
-   rmseInterval = rmseInterval + data:sum()
-   
-   if kk >= curRatio * (size-ignore) then
-        local curRmse = math.sqrt(rmse/noSample)*2
-        rmseInterval  = math.sqrt(rmseInterval/noSampleInterval)*2
-        print( kk .."/" ..  (size-ignore)  .. "\t ratio [".. curRatio .."] : " .. curRmse .. "\t Interval [".. (curRatio - ratioStep) .. "-".. curRatio .. "]: " .. rmseInterval)
-        curRatio = curRatio + ratioStep 
-        rmseInterval = 0
-        noSampleInterval = 0
-   end 
-   
-end
---print( (size-ignore) .."/" ..  (size-ignore)  .. "\t ratio [1.0] : " .. curRmse .. "\t Interval [0.8-1.0]: " .. rmseInterval)
-
-
-
-
-
-
-rmse = math.sqrt(rmse/noSample) * 2 
-      
-print("Final RMSE: " .. rmse)
-print(      "Final MAE : " .. mae)
 
 
       
