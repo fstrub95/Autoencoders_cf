@@ -7,8 +7,8 @@ For instance, if someone rated a few books, Collaborative Filtering aims at esti
 The following module tackles Collaborative Filtering by using sparse denoising autoencoders.
 
 More information can be found in those papers
-NIPS workshop: https://hal.archives-ouvertes.fr/hal-01256422/document
-ICML: to_come
+> - NIPS workshop: https://hal.archives-ouvertes.fr/hal-01256422/document
+> - ICML: to_come
 
 Dependencies:
  - torch
@@ -17,12 +17,14 @@ Dependencies:
  - nnsparse
  - optim
 
-## STEP 1 : Building the data##
+(optional) anaconda2
+
+## STEP 1 : Build the data##
 
 ```
 th data.lua  -xargs
 ```
-This script will turn an external raw dataset into torch format. The dataset will be split into a training/testing set by using the training ratio. When side inforamtion exist, they are automatically appended to the inputs. The movieLens and douban dataset are supported by default. If you want to parse new datasets, please have a look to data/TemplateLoader.lua.
+This script will turn an external raw dataset into torch format. The dataset will be split into a training/testing set by using the training ratio. When side inforamtion exist, they are automatically appended to the inputs. The [MovieLens](http://grouplens.org/datasets/movielens/) and [Douban](https://www.cse.cuhk.edu.hk/irwin.king/pub/data/douban) dataset are supported by default. If you want to parse new datasets, please have a look to data/TemplateLoader.lua.
 
 ```
 Options
@@ -45,10 +47,10 @@ For information, the datasets contains the following side information
 
 | Dataset       | user info | item info  | item tags |
 | :-------      | --------: | :--------: | --------: |
-| movieLens-1M  | true      |  true      |  false    |
-| movieLens-10M | false     |  true      |  true     |
-| movieLens-20M | false     |  true      |  true     |
-| Douban        | true      |  info      |  false    |
+| [MovieLens-1M](http://grouplens.org/datasets/movielens/1m/)  | true      |  true      |  false    |
+| [MovieLens-10M](http://grouplens.org/datasets/movielens/10m/) | false     |  true      |  true     |
+| [MovieLens-20M](http://grouplens.org/datasets/movielens/20m/) | false     |  true      |  true     |
+| [Douban](https://www.cse.cuhk.edu.hk/irwin.king/pub/data/douban)       | true      |  info      |  false    |
 
 To compute tags, please use the script sparsesvd.py
 ```
