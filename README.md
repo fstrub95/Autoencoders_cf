@@ -1,18 +1,14 @@
-# Collaborative Filtering with Stacked Denoising Encoders and Sparse Inputs
+# Collaborative Filtering with Stacked Denoising Autoencoders and Sparse Inputs
 
-Original paper: https://hal.archives-ouvertes.fr/hal-01256422/document
+Collaborative Fltering uses the ratings history of users and items. The feedback of one user on some items is
+combined with the feedback of all other users on all items to predict a new rating. 
+For instance, if someone rated a few books, Collaborative Filtering aims at estimating the ratings he would have given to thousands of other books by using the ratings of all the other readers. 
 
-Collaborative filering consists in predicting the rating of items by a user by using the feedback of all other users. In other words, it tries to turn a sparse matrix of ratings into a dense matrix of ratings. 
+The following module tackles Collaborative Filtering by using sparse denoising autoencoders.
 
-The following module tackles the issue by using sparse denoising autoencoders.
-
-You may run the program by executing the following commands in the source folder:
-
-```
-th main.lua
-```
-The default behavior will predict the rating of the dataset movieLens-1M. (90% training, 10% rating)  
-
+More information can be found in those papers
+NIPS workshop: https://hal.archives-ouvertes.fr/hal-01256422/document
+ICML: to_come
 
 Dependencies:
  - torch
@@ -21,16 +17,67 @@ Dependencies:
  - nnsparse
  - optim
 
+## STEP 1 : Building the data##
 
-The following options are also available:
 ```
--file         The relative path to your data file.              Default = ../data/movieLens/ratings-1M.dat
--fileType     The data file format (jester/movieLens/classic)   Default = movieLens         
--ratio        The training ratio                                Default = 0.9               
--conf         The relative path to the lua configuration file.  Default = config.template.lua
--out          The path to store the final matrix (csv)          Default = ../out.csv
--seed         The random seed                                   Default = 1234
+th data.lua  -xargs
 ```
+This script will turn an external raw dataset into torch format. The dataset will be split into a training/testing set by using the training ratio. When side inforamtion exist, they are automatically appended to the inputs. The movieLens and douban dataset are supported by default. If you want to parse new datasets, please have a look to data/TemplateLoader.lua.
+
+```
+Options
+  -ratings  [compulsary] The relative path to your data file 
+  -metaUser The relative path to your metadata file for users 
+  -metaItem The relative path to your metadata file for items 
+  -tags     The relative path to your tag file 
+  -fileType [compulsary] The data file format (movieLens/douban/classic) 
+  -out      [compulsary] The data file format (movieLens/douban/classic)
+  -ratio    [compulsary] The training ratio 
+  -seed     seed 
+```
+
+Example:
+```
+th data.lua  -ratings ../data/movieLens-10M/ratings.dat -metaItem ../data/movieLens-10M/movies.dat -out movieLens-10M.t7 -fileType movieLens -ratio 0.9
+```
+
+For information, the datasets contains the following side information
+
+| Dataset       | user info | item info  | item tags |
+| :-------      | --------: | :--------: | --------: |
+| movieLens-1M  | true      |  true      |  false    |
+| movieLens-10M | false     |  true      |  true     |
+| movieLens-20M | false     |  true      |  true     |
+| Douban        | true      |  info      |  false    |
+
+To compute tags, please use the script sparsesvd.py
+```
+python2 sparsesvd.py [in] [out] [rank]
+```
+
+## STEP 2 : Train the Network##
+
+```
+th main.lua  -xargs
+```
+
+You can either train a U-Autoencoders/V-Autoencoders. Both will compute a final matrix of ratings. Yet, U-encoders will mainly learn a representation of users while V-Autoencoders will mainly learn representation of items. Training a network requires to use an external configuration file (cf further for more explanation regarding this file). Basic configuration files are provided for both MovieLens and Douban datasets.
+
+```
+Options
+  -file [compulsary] The relative path to your data file (torch format). Please use data.lua to create such file.
+  -conf [compulsary] The relative path to the lua configuration file
+  -seed The seed. random = 0
+  -meta [compulsary] use metadata false=0, true=1
+  -type [compulsary] Pick either the U/V Autoencoder. 
+  -gpu  [compulsary] use gpu. CPU = 0, GPU > 0 with GPU the index of the device
+  -save Store the final network in an external file 
+```
+Example:
+```
+th main.lua  -file ../data/movieLens/movieLens-1M.dat -metaUser ../data/movieLens/users-1M.dat  -metaItem ../data/movieLens/movies-1M.dat -out movieLens-1M.t7 -fileType movieLens -ratio 0.9
+```
+
 
 PS : fileType classic : one line ="idUser idItem rating"
 
