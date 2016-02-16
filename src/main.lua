@@ -1,3 +1,4 @@
+
 -- Load global libraries
 require("nn")
 require("optim")
@@ -7,15 +8,15 @@ torch.setdefaulttensortype('torch.FloatTensor')
 
 require("nnsparse")
 
-dofile("data.lua")
-
-dofile("AlgoTools.lua")
-
-dofile("AutoEncoderTrainer.lua")
-dofile("LearnU.lua")
+dofile("misc/Preload.lua")
+dofile("misc/AutoEncoderTrainer.lua")
+dofile("misc/TrainNetwork.lua")
 
 
-
+dofile("tools/Appender.lua")
+dofile("tools/SDAECriterionGPU.lua")
+dofile("tools/CFNTools.lua")
+dofile("tools/LuaTools.lua")
 
 ----------------------------------------------------------------------
 -- parse command-line options
@@ -26,94 +27,55 @@ cmd:text('Learn SDAE network for collaborative filtering')
 cmd:text()
 cmd:text('Options')
 -- general options:
-cmd:option('-file'        , '../data/movieLens/ratings-1M.dat' , 'The relative path to your data file')
-cmd:option('-conf'        , "config.template.lua"              , 'The relative path to the lua configuration file')
-cmd:option('-ratio'       , 0.9                                , 'The training ratio')
-cmd:option('-fileType'    , "movieLens"                        , 'The data file format (jester/movieLens/classic)')
-cmd:option('-seed'        , 1234                               , 'The seed')
-cmd:option('-out'         , '../out.csv'                       , 'The path to store the final matrix (csv) ')
+cmd:option('-file'           , '../data/movieLens-10M.t7'         , 'The relative path to your data file (torch format). Please use data.lua to create such file.')
+cmd:option('-conf'           , "../conf/conf.movieLens.10M.V.lua" , 'The relative path to the lua configuration file')
+cmd:option('-seed'           , 0                                  , 'The seed. random = 0')
+cmd:option('-meta'           , 1                                  , 'use metadata false = 0, true 1')
+cmd:option('-type'           , 'V'                                , 'Pick either the U/V Autoencoder.')
+cmd:option('-gpu'            , 1                                  , 'use gpu. CPU = 0, GPU > 0 with GPU the index of the device')
+cmd:option('-save'           , ''                                 , "Store the final network in an external file")
 cmd:text()
-
-
 
 
 local params = cmd:parse(arg)
 
 print("Options: ")
 for key, val in pairs(params) do
-   print(" - " .. key  .. "  \t : " .. val)
+   print(" - " .. key  .. "  \t : " .. tostring(val))
 end
 
 
-
-torch.manualSeed(params.seed)
-math.randomseed(params.seed)
-
-
---Load data
-local train, test = LoadData(
-   {
-      type  = params.fileType,
-      ratio = params.ratio,
-      file  = params.file,
-   })
-   
-   
-   
---Load configuration
-dofile(params.conf)
-
-
---compute neural network
-local estimate
-if configU then
-
-   -- unbias U
-   for k, u in pairs(train.U.data) do
-      u[{{}, 2}]:add(-train.U.info[k].mean) --center input
-   end
-
-   _, estimate = trainU(train, test, configU)
-   
-elseif configV then
-
-   --unbias V
-   for k, v in pairs(train.V.data) do
-      train.V.info[k] = train.V.info[k] or {}     
-      train.V.info[k].mean = v[{{}, 2}]:mean()
-   
-      v[{{}, 2}]:add(-train.V.info[k].mean) --center input
-   end
-
-   _, estimate = trainV(train, test, configV)
+if params.seed > 0 then
+   torch.manualSeed(params.seed)
+else
+   torch.manualSeed(torch.seed())
 end
 
 
+print("Load training configuration...")
+local config = dofile(params.conf)
 
-print("Saving Matrix...")
-tensorToCsv(estimate, params.out)
-
-print("done!")
-
-
-
+--Append command line configuration
+config.use_meta       = params.meta > 0
+config.use_gpu        = params.gpu  > 0
 
 
 
+print("Load data...")
+local train, test, info = LoadData(params.file, params)
 
 
+print("Training network")
+local rmse, network = TrainNetwork(train, test, info, config)
 
 
+if #params.save > 0 then
+   print("Saving final network on Disk...")
+   torch.save(params.save, network)
+end
 
 
-
-
-
-
-
-
-
-
+print("Done!!!")
 
 
 
