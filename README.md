@@ -198,9 +198,10 @@ Further work will enable to directly suggest items to users (or users to items!)
 
 The SVD and ALS-WR algorithms are provided for benchmarking for medium size datasets. For bigger datasets, we adivese to use  [mahout](http://mahout.apache.org/)
 
- - ALS-WR : benchmark/als.lua
-
-The following options are available:
+ - ALS-WR :
+```
+th ALS.lua  -xargs
+```
 ```
 -file         The relative path to your data file.              
 -lambda       Rank of the final matrix                             
@@ -208,7 +209,10 @@ The following options are available:
 -seed         The random seed                                   
 ```
 
- - Gradient 
+ - Gradient :
+```
+th GradDescent.lua  -xargs
+```
 ```
 -file         The relative path to your data file.              
 -lambda       Rank of the final matrix                         
