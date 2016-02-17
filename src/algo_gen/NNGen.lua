@@ -104,182 +104,141 @@ end
 
 
 
-function NNGen:EvaluateAll(genes)      
+function NNGen:EvaluateAll(genes, genConf)      
 
-   local nthread = 0 
-
-   if nthread == 0 then
-
-      if torch.type(self.train.U.data[1]) ~= "torch.CudaTensor" then
-         require("cunn")
+   --if nthread == 0 then
    
-         cutorch.setDevice(GPU_DEVICE)
- 
-         local function toGPU(type)
-            local _train = self.train[type]
-            local _test  = self.test [type]
-
-            for k, _ in pairs(_train.data) do
-
-               self.train[type].data[k] = _train.data[k]:cuda()
-
-               if self.train[type].info.metaDim then
-                  self.train[type].full               = _train.info[k].full:cuda()
-                  self.train[type].info[k].fullSparse = _train.info[k].fullSparse:cuda()
-               end
-            end
-
-            for k, _ in pairs(_test.data) do
-
-               self.test[type].data[k] = _test.data[k]:cuda()
-
-               if self.test[type].info.metaDim then
-                  self.test[type].full               = _test.info[k].full:cuda()
-                  self.test[type].info[k].fullSparse = _test.info[k].fullSparse:cuda()
-               end
-            end
-
-         end
-
-         print("Load representation : " .. NN_TYPE)
-         toGPU(NN_TYPE)
-
-      end
+   
+      print("Load data...")
+      local train, test, info = LoadData(genConf.file, genConf.file)
 
       local noGenes = table.Count(genes)
-      for i = 1,noGenes do
+      for i = 1, noGenes do
          print()
          print("New Gene : " .. i)
          local gene = genes[i].gene
          self:PrintOne(gene)
+         
          local conf = self:LoadGene(gene) 
-
-         local fitness = 999
-
-         if     self.nnType == "U" then fitness = trainU(self.train, self.test, conf)
-         elseif self.nnType == "V" then fitness = trainV(self.train, self.test, conf)           
-         else   
-            error("Invalid network type")
-         end
-
+         
+         genes[i].score = TrainNetwork(train, test, info, conf)
+         
          collectgarbage()
-
-         genes[i].score = fitness
       end
 
-   else
-
-   local njob = table.Count(genes)
-   local pool = threads.Threads(
-      nthread,
-      function(threadid)
-         print('starting a new thread/state number ' .. threadid)
-
-         require("nn")
-         require("optim")
-         require("xlua")
-         require("sys")
-         
-         USE_GPU = true
-         
-         if USE_GPU then
-            require("cunn")
-         end
-        
-         torch.setdefaulttensortype('torch.FloatTensor') 
-         require("nnsparse")
-
-         dofile("AlgoTools.lua")
-         dofile("tools.lua")
-
-
-         dofile("AlgoGen.lua")
-         dofile("NNGen.lua")
-
-         dofile("SDAECriterionGPU.lua")
-         dofile("AutoEncoderTrainer.lua")
-         dofile("LearnU.lua")
-         dofile("Appender.lua")
-      end
-   )
-
-   local jobdone = 0
-   for i = 1,njob do
-
-      pool:addjob(
-
-            function()
-               local noGPUDevice = math.fmod(i,2) + 1
-               cutorch.setDevice(noGPUDevice)
-               
-               print(string.format('START Training on thread %x with GPU %d',  __threadid, noGPUDevice))
-
-               local GPUTrain = table.Copy(self.train)
-               local GPUTest  = table.Copy(self.test)
-
-               print("Loading data to GPU [".. noGPUDevice .. "/" .. cutorch.getDevice() .."]...")
-
-               local function toGPU(type)
-                  local _train = self.train[type]
-                  local _test  = self.test [type]
-
-                  for k, _ in pairs(_train.data) do
-
-                     GPUTrain[type].data[k] = _train.data[k]:cuda()
-
-                     if GPUTrain[type].info.metaDim then
-                        GPUTrain[type].full               = _train.info[k].full:cuda()
-                        GPUTrain[type].info[k].fullSparse = _train.info[k].fullSparse:cuda()
-                     end
-                  end
-
-                  for k, _ in pairs(_test.data) do
-
-                     GPUTest[type].data[k] = _test.data[k]:cuda()
-
-                     if GPUTest[type].info.metaDim then
-                        GPUTest[type].full               = _test.info[k].full:cuda()
-                        GPUTest[type].info[k].fullSparse = _test.info[k].fullSparse:cuda()
-                     end
-                  end
-
-               end
-
-               toGPU("U")
-               toGPU("V")
-
-               SHOW_PROGRESS = true
-
-               --------------------------------------------------------------------------------
-
-               local gene = genes[i].gene
-               local conf = self:LoadGene(gene) 
-
-               local fitness = 999
-
-               if     self.nnType == "U" then 
-			fitness = trainU(GPUTrain, GPUTest, conf)
-               elseif self.nnType == "V" then 
-			fitness = trainV(GPUTrain, GPUTest, conf)           
-               else   
-                  error("Invalid network type")
-               end
-
-               return __threadid, fitness
-            end,
-
-            function(id, fitness)
-               genes[i].score = fitness
-               
-               print(string.format("Training gene %d finished (thread ID %x). Score : %f" , i, id, fitness))
-               jobdone = jobdone + 1
-            end
-      )
-   end
-
-   pool:synchronize()
-   pool:terminate() 
-   end
+--   else
+--
+--   local njob = table.Count(genes)
+--   local pool = threads.Threads(
+--      nthread,
+--      function(threadid)
+--         print('starting a new thread/state number ' .. threadid)
+--
+--         require("nn")
+--         require("optim")
+--         require("xlua")
+--         require("sys")
+--         
+--         USE_GPU = true
+--         
+--         if USE_GPU then
+--            require("cunn")
+--         end
+--        
+--         torch.setdefaulttensortype('torch.FloatTensor') 
+--         require("nnsparse")
+--
+--         dofile("AlgoTools.lua")
+--         dofile("tools.lua")
+--
+--
+--         dofile("AlgoGen.lua")
+--         dofile("NNGen.lua")
+--
+--         dofile("SDAECriterionGPU.lua")
+--         dofile("AutoEncoderTrainer.lua")
+--         dofile("LearnU.lua")
+--         dofile("Appender.lua")
+--      end
+--   )
+--
+--   local jobdone = 0
+--   for i = 1,njob do
+--
+--      pool:addjob(
+--
+--            function()
+--               local noGPUDevice = math.fmod(i,2) + 1
+--               cutorch.setDevice(noGPUDevice)
+--               
+--               print(string.format('START Training on thread %x with GPU %d',  __threadid, noGPUDevice))
+--
+--               local GPUTrain = table.Copy(self.train)
+--               local GPUTest  = table.Copy(self.test)
+--
+--               print("Loading data to GPU [".. noGPUDevice .. "/" .. cutorch.getDevice() .."]...")
+--
+--               local function toGPU(type)
+--                  local _train = self.train[type]
+--                  local _test  = self.test [type]
+--
+--                  for k, _ in pairs(_train.data) do
+--
+--                     GPUTrain[type].data[k] = _train.data[k]:cuda()
+--
+--                     if GPUTrain[type].info.metaDim then
+--                        GPUTrain[type].full               = _train.info[k].full:cuda()
+--                        GPUTrain[type].info[k].fullSparse = _train.info[k].fullSparse:cuda()
+--                     end
+--                  end
+--
+--                  for k, _ in pairs(_test.data) do
+--
+--                     GPUTest[type].data[k] = _test.data[k]:cuda()
+--
+--                     if GPUTest[type].info.metaDim then
+--                        GPUTest[type].full               = _test.info[k].full:cuda()
+--                        GPUTest[type].info[k].fullSparse = _test.info[k].fullSparse:cuda()
+--                     end
+--                  end
+--
+--               end
+--
+--               toGPU("U")
+--               toGPU("V")
+--
+--               SHOW_PROGRESS = true
+--
+--               --------------------------------------------------------------------------------
+--
+--               local gene = genes[i].gene
+--               local conf = self:LoadGene(gene) 
+--
+--               local fitness = 999
+--
+--               if     self.nnType == "U" then 
+--			fitness = trainU(GPUTrain, GPUTest, conf)
+--               elseif self.nnType == "V" then 
+--			fitness = trainV(GPUTrain, GPUTest, conf)           
+--               else   
+--                  error("Invalid network type")
+--               end
+--
+--               return __threadid, fitness
+--            end,
+--
+--            function(id, fitness)
+--               genes[i].score = fitness
+--               
+--               print(string.format("Training gene %d finished (thread ID %x). Score : %f" , i, id, fitness))
+--               jobdone = jobdone + 1
+--            end
+--      )
+--   end
+--
+--   pool:synchronize()
+--   pool:terminate() 
+--   end
 
    return genes
 
@@ -298,17 +257,7 @@ function NNGen:Preconfigure(genConf)
    print(self.train.V.size .. " Items loaded")
 
    -- unbias U
-   for k, u in pairs(self.train.U.data) do
-      u[{{}, 2}]:add(-self.train.U.info[k].mean) --center input
-   end
 
-   --unbias V
-   for k, v in pairs(self.train.V.data) do
-      self.train.V.info[k] = self.train.V.info[k] or {}     
-      self.train.V.info[k].mean = v[{{}, 2}]:mean()
-
-      v[{{}, 2}]:add(-self.train.V.info[k].mean) --center input
-   end
 
    
    SHOW_PROGRESS = true 

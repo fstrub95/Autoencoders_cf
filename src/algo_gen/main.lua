@@ -32,7 +32,8 @@ cmd:text('Options')
 cmd:option('-file'           , './dummy.t7'            , 'The relative path to your data file (torch format)')
 cmd:option('-seed'           , 1234                    , 'The seed')
 cmd:option('-gpu'            , 1                       , 'use gpu')
-cmd:option('-nn'              , "V"                     , 'autoencoder type')
+--cmd:option('-noThread'       , 0                     , 'autoencoder type')
+cmd:option('-type'           , "V"                     , 'autoencoder type')
 cmd:text()
 
 local params = cmd:parse(arg)
@@ -42,22 +43,30 @@ for key, val in pairs(params) do
    print(" - " .. key  .. "  \t : " .. tostring(val))
 end
 
-torch.manualSeed(params.seed)
-math.randomseed(params.seed)
+if params.seed > 0 then
+   torch.manualSeed(params.seed)
+else
+   torch.manualSeed(torch.seed())
+end
 
 GPU_DEVICE = params.gpu
 NN_TYPE    = params.nn 
-
+NO_THREAD  = params.noThread
 
 local genConf = 
 {
-   noGenes = 20,
-   noEpoch = 10,  
+   noGenes     = 20,
+   noEpoch     = 10,  
    ratioBest   = 1/10,
-   ratioCross = 2/10,
+   ratioCross  = 2/10,
    ratioMutate = 3/10,
    ratioNew    = 4/10,
-   file = params.file
+   sigma       = 0.01,
+   file        = params.file,
+   gpu         = params.gpu,
+   type        = params.type,
+   meta        = params.meta,
+   noThread    = params.noThread
 }
 
 
