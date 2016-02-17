@@ -54,6 +54,12 @@ local function getRegex(noElem)
      return regex
 end
 
+local function densify(sparseTensor, size)
+   local denseTensor = torch.zeros(size)
+   local index = sparseTensor[{{},1}]
+   local data  = sparseTensor[{{},2}]
+    denseTensor:indexCopy(1, index:long(), data)
+end
 
 function classicLoader:LoadMeta(fileName, type, GetXindex) 
 
@@ -106,7 +112,7 @@ function classicLoader:LoadMeta(fileName, type, GetXindex)
    --compute dense side information by using the maximum id of side information
    for _, oneInfo in pairs(self.train[type].info) do
       if oneInfo.fullSparse then
-         oneInfo.full = torch.Tensor.densify(oneInfo.fullSparse,0,{maxId,1})
+         oneInfo.full = densify(oneInfo.fullSparse,maxId)
       else
          oneInfo.full       = torch.zeros(maxId)
          oneInfo.fullSparse = torch.Tensor()

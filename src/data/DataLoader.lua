@@ -45,15 +45,15 @@ end
 -- Protected Method (helper)
 function DataLoader:AppendOneRating(userId, itemId, rating)
    
-   if math.fmod(self.__noRating, 100000) == 0 then
-         print(self.__noRating .. " ratings loaded...")
-   end
-   
    --store the rating in either the training or testing set
    if torch.uniform() < self.__ratioTraining then
       self:appendTrain(userId, itemId, rating)
    else
       self:appendTest(userId, itemId, rating)
+   end
+   
+   if math.fmod(self.__noRating, 100000) == 0 then
+         print(self.__noRating .. " ratings loaded...")
    end
 end
 
