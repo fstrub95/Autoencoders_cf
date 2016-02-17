@@ -30,11 +30,13 @@ cd data/movieLens-10M
 wget http://files.grouplens.org/datasets/movielens/ml-10m.zip
 unzip ml-10m.zip .
 cd ../../src
-th data.lua  -ratings ../data/movieLens-10M/ratings.dat -metaItem ../data/movieLens-10M/movies.dat -out movieLens-10M.t7 -fileType movieLens -ratio 0.9
-th main.lua  -file ../data/movieLens/movieLens-1M.dat -conf ../conf/conf.movieLens.10M.V.lua  -save network.t7 -type V -meta 1 -gpu 1
+th data.lua  -ratings ../data/movieLens-10M/ratings.dat -metaItem ../data/movieLens-10M/movies.dat -out ../data/movieLens-10M/movieLens-10M.t7 -fileType movieLens -ratio 0.9
+th main.lua  -file ../data/movieLens-10M/movieLens-10M.t7 -conf ../conf/conf.movieLens.10M.V.lua  -save network.t7 -type V -meta 1 -gpu 1
 ```
 
 Your network is ready!
+
+(Average time ~25min)
 
 
 ## STEP 1 : Build the data##
