@@ -44,11 +44,11 @@ Your network is ready!
 ```
 th data.lua  -xargs
 ```
-This script will turn an external raw dataset into torch format. The dataset will be split into a training/testing set by using the training ratio. When side inforamtion exist, they are automatically appended to the inputs. The [MovieLens](http://grouplens.org/datasets/movielens/) and [Douban](https://www.cse.cuhk.edu.hk/irwin.king/pub/data/douban) dataset are supported by default. If you want to parse new datasets, please have a look to data/TemplateLoader.lua.
+This script will turn an external raw dataset into torch format. The dataset will be split into a training/testing set by using the training ratio. When side inforamtion exist, they are automatically appended to the inputs. The [MovieLens](http://grouplens.org/datasets/movielens/) and [Douban](https://www.cse.cuhk.edu.hk/irwin.king/pub/data/douban) dataset are supported by default. 
 
 ```
 Options
-  -ratings  [compulsary] The relative path to your data file 
+  -ratings  [compulsary] The relative path to your data file
   -metaUser The relative path to your metadata file for users 
   -metaItem The relative path to your metadata file for items 
   -tags     The relative path to your tag file 
@@ -60,7 +60,7 @@ Options
 
 Example:
 ```
-th data.lua  -ratings ../data/movieLens-10M/ratings.dat -metaItem ../data/movieLens-10M/movies.dat -out movieLens-10M.t7 -fileType movieLens -ratio 0.9
+th data.lua  -ratings ../data/movieLens-10M/ratings.dat -metaItem ../data/movieLens-10M/movies.dat -out ../data/movieLens-10M/movieLens-10M.t7 -fileType movieLens -ratio 0.9
 ```
 
 For information, the datasets contains the following side information
@@ -71,6 +71,46 @@ For information, the datasets contains the following side information
 | [MovieLens-10M](http://grouplens.org/datasets/movielens/10m/) | false     |  true      |  true     |
 | [MovieLens-20M](http://grouplens.org/datasets/movielens/20m/) | false     |  true      |  true     |
 | [Douban](https://www.cse.cuhk.edu.hk/irwin.king/pub/data/douban)       | true      |  info      |  false    |
+
+
+If you have want to use external data (for benchmarking purpose), please use the Classic mode. 
+The classic mode takes up to four file as input:
+- training ratings
+- testing ratings
+- user side information
+- item side information
+
+**Training/Testing** : 
+You have to create two files:
+- [fileName].train
+- [fileName].test
+and provide the following argument to the scrit data.lua
+```
+ls dataset*
+dataset.txt.train
+dataset.txt.test
+th data.lua -ratings dataset.txt
+```
+
+Please use the following format for the training/testing datasets: 
+```[idUser] [idItem] [rating]```
+- idUser > 0 (id must start at 1)
+- idItem > 0
+- rating \in [-1;1]
+ 
+Example:
+```
+1 2 0.31
+2 3 0.5
+1 5 -0.1
+```
+NB If your ratings are not included in [-1,1], you can modify the function preprocessing() in data/ClassicLoader.lua
+Example: 
+```
+ratings \in [1-5]
+preprocessing(x) return (x-3)/2 end
+```
+
 
 To compute tags, please use the script sparsesvd.py
 ```
@@ -97,11 +137,11 @@ Options
 ```
 Example:
 ```
-th main.lua  -file ../data/movieLens/movieLens-1M.dat -conf ../conf/conf.movieLens.10M.V.lua  -type V -meta 1 -gpu 1
+th main.lua  -file ../data/movieLens-10M/movieLens-10M.t7 -conf ../conf/conf.movieLens.10M.V.lua  -save network.t7 -type V -meta 1 -gpu 1
 ```
 
 
-PS : fileType classic : one line ="idUser idItem rating"
+
 
 One may also change the learning process or the network architecture by using the file config.template.lua
 ```lua
