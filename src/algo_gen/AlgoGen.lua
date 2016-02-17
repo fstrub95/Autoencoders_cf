@@ -148,10 +148,15 @@ function AlgoGen:Learn()
       -- Copy Best genes
       table.merge(newGenes, S1)
   
+  
+     local val, key = table.Random( geneBuf )   
+   local newGene  = table.Copy(gene)
+  
+  
       -- Cross Over set1 and set2
-      for _, oneGene in pairs(S2) do
-         local geneA = oneGene.gene
-         local geneB = S1[math.random( 1, #S1 )].gene
+      for k = 1, (noCross/2 + 0.5)  do
+         local geneA = S1[math.random( 1, #S1 )].gene
+         local geneB = S2[math.random( 1, #S2 )].gene
          local newGene1 = { gene = self:CrossOne(geneA, geneB), score = NaN }
          local newGene2 = { gene = self:CrossOne(geneB, geneA), score = NaN } 
          table.insert(newGenes, newGene1)
