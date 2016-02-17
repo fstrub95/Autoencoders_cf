@@ -39,7 +39,7 @@ Your network is ready!
 (Average time ~25min)
 
 
-## STEP 1 : Build the data##
+## STEP 1 : Convert the dataset##
 
 ```
 th data.lua  -xargs
@@ -138,99 +138,82 @@ Example:
 ```
 th main.lua  -file ../data/movieLens-10M/movieLens-10M.t7 -conf ../conf/conf.movieLens.10M.V.lua  -save network.t7 -type V -meta 1 -gpu 1
 ```
+NB: Saving the network let you use it for recommendation tasks. 
 
-
-
-
-One may also change the learning process or the network architecture by using the file config.template.lua
+You can configure the network architecture and training by modifying the file config.template.lua
+it has the following structure:
 ```lua
-configV =          -- ConfigV --> learn Vencoder / configU --> learn Uencoder
-{
-   layer1 = 
-   {      
-      isTied    = false, -- tie the autoencoders weight
-      coefLayer = 10,    -- reduce the size of hidden layer of the autoencoder by diving the input size by X
-      { 
-         criterion = nn.SDAESparseCriterion(nn.MSECriterion(), -- define the training loss
-         {
-            alpha = 1,                       -- prediction hyperparameter 
-            beta  = 1,                       -- reconstruction hyperparameter
-            noiseRatio = 0,                  -- Gaussian noise ratio
-            flipRatio = 0.05,                -- SaltAndPepper Ratio
-            flipRange = torch.Tensor{-1, 1}, -- SaltAndPaperRange
-            hideRatio = 0.15,                -- Maksing noise ratio
-         }), 
-         noEpoch = 15,                       -- number of epoch to train the layer
-         miniBatchSize = 20,                 -- minibatch size 
-         learningRate = 0.03,                -- Learning rate
-         learningRateDecay = 0.1,            -- Learning rate decay lrt = lrt / (1+lrt_dec)
-         weightDecay = 0.03,                 -- L2 regulizer
-         momentum = 0.8,                     -- momentum
-      },
-      
-   },
-```
-
-When several layers are stacked, one need to define the learning process of every layer
-```lua
-configV = 
+local config = 
 {
    layer1 = 
    {
-      isTied    = false, 
-      coefLayer = 10,    
+      layerSize = 100,    
     { Training 1 }
    },
    layer2 =
    {
-     isTied    = false, 
-     coefLayer = 12,    
+     layerSize = 50,    
      { Training 1 },  --inner hidden layers
      { Training 2 },  --final network
     },
     layer3 =
    { 
-     isTied    = false, 
-     coefLayer = 14,    
+     layerSize = 20,    
     { Training 1 }, -- inner hidden layers
     { Training 2 }, -- intermediate hidden layers
     { Training 3 }, -- final network
     }
     etc.
 }
+return config
+```
+Autoencoders are iteratively trained, stacked and fine-tuned.
+
+"Training" is defined as follow:
+```
+{
+   noEpoch = 15,             -- number of epoch to train the layer
+   miniBatchSize = 35,       -- minibatch size 
+   learningRate = 0.02,      -- Learning rate
+   learningRateDecay = 0.5,  -- Learning rate decay lrt = lrt / (1+lrt_dec)   
+   weightDecay = 0.03,       -- L2 regulizer
+   criterion = cfn.SDAECriterionGPU(nn.MSECriterion(),  -- define the training loss
+   {
+      alpha = 1,        -- prediction hyperparameter 
+      beta  = 0.5,      -- reconstruction hyperparameter
+      hideRatio = 0.2,  -- Maksing noise ratio
+   }), 
+}
 ```
 
-The SVD and ALS-WR algorithms are also provided for benchmarking
+## STEP 3 : Recommender System ##
 
-##ALS-WR##
-```
-th ALS.lua
-```
+Once the network is trained, it is possible to use it as a recommender system.
+For now, it is possible to compute the RMSE by sorting the users/items regarding their number of ratings.
+
+Further work will enable to directly suggest items to users (or users to items!)
+
+
+## Benchmarks ##
+
+The SVD and ALS-WR algorithms are provided for benchmarking for medium size datasets. For bigger datasets, we adivese to use  [mahout](http://mahout.apache.org/)
+
+ - ALS-WR : benchmark/als.lua
 
 The following options are available:
 ```
--file         The relative path to your data file.              Default = ../data/movieLens/ratings-1M.dat
--fileType     The data file format (jester/movieLens/classic)   Default = movieLens        
--ratio        The training ratio                                Default = 0.9
--out          The path to store the final matrix (csv)          Default = ..
--lambda       Rank of the final matrix                          Default = 15   
--rank         Regularisation                                    Default = 0.05   
--seed         The random seed                                   Default = 1234
+-file         The relative path to your data file.              
+-lambda       Rank of the final matrix                             
+-rank         Regularisation                                      
+-seed         The random seed                                   
 ```
 
-##SVD##
+ - Gradient 
 ```
-th GradDescent.lua
+-file         The relative path to your data file.              
+-lambda       Rank of the final matrix                         
+-rank         Regularisation                                     
+-lrt          Learning Rate                                    
+-seed         The random seed                                   
 ```
 
-The following options are available:
-```
--file         The relative path to your data file.              Default = ../data/movieLens/ratings-1M.dat
--fileType     The data file format (jester/movieLens/classic)   Default = movieLens        
--ratio        The training ratio                                Default = 0.9
--out          The path to store the final matrix (csv)          Default = ..
--lambda       Rank of the final matrix                          Default = 15   
--rank         Regularisation                                    Default = 0.05   
--lrt          Learning Rate                                     Default = 0.02   
--seed         The random seed                                   Default = 1234
-```
