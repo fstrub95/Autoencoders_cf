@@ -104,12 +104,11 @@ Example:
 2 3 0.5
 1 5 -0.1
 ```
+
 NB If your ratings are not included in [-1,1], you can modify the function preprocessing() in data/ClassicLoader.lua
 Example: 
-```
-ratings \in [1-5]
-preprocessing(x) return (x-3)/2 end
-```
+
+if the ratings are included in [1-5]: ```preprocessing(x) return (x-3)/2 end```
 
 
 To compute tags, please use the script sparsesvd.py
