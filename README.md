@@ -7,8 +7,8 @@ For instance, if someone rated a few books, Collaborative Filtering aims at esti
 The following module tackles Collaborative Filtering by using sparse denoising autoencoders.
 
 More information can be found in those papers
-> - NIPS workshop: https://hal.archives-ouvertes.fr/hal-01256422/document
-> - ICML: to_come
+- NIPS workshop: https://hal.archives-ouvertes.fr/hal-01256422/document
+- ICML: to_come
 
 Dependencies:
  - torch
@@ -18,6 +18,24 @@ Dependencies:
  - optim
 
 (optional) anaconda2
+
+## SUMMARY ##
+
+```
+git clone git@github.com:fstrub95/Autoencoders_cf.git
+cd Autoencoders_cf
+mkdir data
+mkdir data/movieLens-10M
+cd data/movieLens-10M
+wget http://files.grouplens.org/datasets/movielens/ml-10m.zip
+unzip ml-10m.zip .
+cd ../../src
+th data.lua  -ratings ../data/movieLens-10M/ratings.dat -metaItem ../data/movieLens-10M/movies.dat -out movieLens-10M.t7 -fileType movieLens -ratio 0.9
+th main.lua  -file ../data/movieLens/movieLens-1M.dat -conf ../conf/conf.movieLens.10M.V.lua  -save network.t7 -type V -meta 1 -gpu 1
+```
+
+Your network is ready!
+
 
 ## STEP 1 : Build the data##
 
@@ -77,7 +95,7 @@ Options
 ```
 Example:
 ```
-th main.lua  -file ../data/movieLens/movieLens-1M.dat -metaUser ../data/movieLens/users-1M.dat  -metaItem ../data/movieLens/movies-1M.dat -out movieLens-1M.t7 -fileType movieLens -ratio 0.9
+th main.lua  -file ../data/movieLens/movieLens-1M.dat -conf ../conf/conf.movieLens.10M.V.lua  -type V -meta 1 -gpu 1
 ```
 
 
