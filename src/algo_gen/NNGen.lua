@@ -6,7 +6,7 @@ function NNGen:GenerateOne()
    self.nnType = NN_TYPE
 
    local gene = {}
- --  gene.layer1       = torch.random (500 , 700)
+   gene.layer1       = torch.random (500 , 700)
    gene.alpha1       = torch.uniform(0.8 , 1.2)
    gene.beta1        = torch.uniform(0   , 1)
    gene.hide1        = torch.uniform(0   , 0.5)
@@ -17,13 +17,13 @@ function NNGen:GenerateOne()
    --gene.grad1      = "sgd"
 
 --   gene.layer2       = torch.random (400 , 600)
-   gene.alpha2       = torch.uniform(0.8 , 1.2)
-   gene.beta2        = torch.uniform(0.  , 1)
-   gene.hide2        = torch.uniform(0   , 0.5)
+--   gene.alpha2       = torch.uniform(0.8 , 1.2)
+--   gene.beta2        = torch.uniform(0.  , 1)
+--   gene.hide2        = torch.uniform(0   , 0.5)
 --   gene.batch2       = 25--torch.random(10, 50)
-   gene.lrt2         = torch.uniform(0, 0.1)
-   gene.lrtDecay2    = torch.uniform(-0.2, 0.4)
-   gene.weigthDecay2 = torch.uniform(0, 0.1)
+--   gene.lrt2         = torch.uniform(0, 0.1)
+--   gene.lrtDecay2    = torch.uniform(-0.2, 0.4)
+--   gene.weigthDecay2 = torch.uniform(0, 0.1)
 --   gene.grad2        = "sgd"
 
 
@@ -74,7 +74,7 @@ function NNGen:LoadGene(gene)
                      noiseRatio = gene.noiseRatio3 or 0.2,
                      noiseStd  = gene.noiseStd3 or 0.02, 
                   }),
-               noEpoch = 4, 
+               noEpoch = 0, 
                miniBatchSize = 20,
                learningRate  = gene.lrt3 or 1e-5,  
                weightDecay   = gene.weigthDecay3 or 0.2,
@@ -88,7 +88,7 @@ function NNGen:LoadGene(gene)
                      beta      = gene.beta2 or 0,
                      hideRatio = gene.hide2 or 0,
                   }), 
-               noEpoch           = 15, 
+               noEpoch           = 0, 
                miniBatchSize     = 25, -- gene.batch2,
                learningRate      = gene.lrt2 or 0,  
                learningRateDecay = gene.lrtDecay2 or 0,
@@ -246,22 +246,6 @@ end
 
 
 function NNGen:Preconfigure(genConf)   
-
-   --Load data
-   print("loading data...")
-   local data = torch.load(genConf.file) 
-   self.train = data.train
-   self.test  = data.test
-
-   print(self.train.U.size .. " Users loaded")
-   print(self.train.V.size .. " Items loaded")
-
-   -- unbias U
-
-
-   
-   SHOW_PROGRESS = true 
-   USE_GPU       = true 
 
 end
 
