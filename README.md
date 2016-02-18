@@ -228,8 +228,7 @@ The SVD and ALS-WR algorithms are provided for benchmarking for medium size data
  - ALS-WR :
 ```
 th ALS.lua  -xargs
-```
-```
+
 -file         The relative path to your data file.              
 -lambda       Rank of the final matrix                             
 -rank         Regularisation                                      
@@ -239,8 +238,7 @@ th ALS.lua  -xargs
  - Gradient :
 ```
 th GradDescent.lua  -xargs
-```
-```
+
 -file         The relative path to your data file.              
 -lambda       Rank of the final matrix                         
 -rank         Regularisation                                     
