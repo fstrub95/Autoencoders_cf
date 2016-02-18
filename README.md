@@ -30,6 +30,7 @@ unzip ml-10m.zip
 cd ../src
 th data.lua  -ratings ../data/ml-10M100K/ratings.dat -metaItem ../data/ml-10M100K/movies.dat -out ../data/ml-10M100K/movieLens-10M.t7 -fileType movieLens -ratio 0.9
 th main.lua  -file ../data/ml-10M100K/movieLens-10M.t7 -conf ../conf/conf.movieLens.10M.V.lua  -save network.t7 -type V -meta 1 -gpu 1
+th computeMetrics.lua -file ../data/ml-10M100K/movieLens-10M.t7 -network network.t7 -type V -gpu 1
 ```
 
 Your network is ready!
@@ -71,6 +72,15 @@ For information, the datasets contains the following side information
 | [Douban](https://www.cse.cuhk.edu.hk/irwin.king/pub/data/douban)       | true      |  info      |  false    |
 
 
+To compute tags, please use the script sparsesvd.py : ```sparsesvd.py [in] [out] [rank]```
+
+Example: 
+```
+python2 sparsesvd.py ml-10M100K/tags.dat ml-10M100K/tags.dense.csv 50
+th data.lua -xargs ... -tags ml-10M100K/tags.dense.csv
+```
+
+
 If you have want to use external data (for benchmarking purpose), please use the Classic mode. 
 The classic mode takes up to four file as input:
 - training ratings
@@ -103,18 +113,26 @@ Example:
 1 5 -0.1
 ```
 
+
 NB If your ratings are not included in [-1,1], you can modify the function preprocessing() in data/ClassicLoader.lua
-Example: 
-
-if the ratings are included in [1-5]: ```preprocessing(x) return (x-3)/2 end```
+For instance, if the ratings are included in [1-5], use: ```preprocessing(x) return (x-3)/2 end```
 
 
-To compute tags, please use the script sparsesvd.py : ```sparsesvd.py [in] [out] [rank]```
+Please use the following format for the side information datasets: 
+ - user side info : ```[idUser] [noInfo] [idUserInfo]:[value] [idUserInfo]:[value] ...```
+ - user item info : ```[idItem] [noInfo] [idItemInfo]:[value] [idItemInfo]:[value] ...```
 
+where
+- idUser/idItem > 0 (id must correspond to the training/testing datasets)
+- idUserInfo/idItemInfo > 0 (id must start at 1)
+- value \in [-1;1]
 Example: 
 ```
-python2 sparsesvd.py
+1 2 5:0.31 12:-1
+2 0
+1 3 5:0.28 4:1 12:0.5
 ```
+
 
 ## STEP 2 : Train the Network##
 
