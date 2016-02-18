@@ -117,7 +117,16 @@ Example:
 NB If your ratings are not included in [-1,1], you can modify the function preprocessing() in data/ClassicLoader.lua
 For instance, if the ratings are included in [1-5], use: ```preprocessing(x) return (x-3)/2 end```
 
-
+**Side information** : 
+You can create two files:
+- [userFileName].txt
+- [itemFileName].txt
+```
+ls dataset*
+dataset.txt.train
+dataset.txt.test
+th data.lua -ratings [fileName] -metaUser [userFileName].txt -metaItem [itemFileName].txt
+```
 Please use the following format for the side information datasets: 
  - user side info : ```[idUser] [noInfo] [idUserInfo]:[value] [idUserInfo]:[value] ...```
  - user item info : ```[idItem] [noInfo] [idItemInfo]:[value] [idItemInfo]:[value] ...```
