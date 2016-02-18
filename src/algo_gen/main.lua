@@ -7,14 +7,14 @@ torch.setdefaulttensortype('torch.FloatTensor')
 
 require("nnsparse")
 
-dofile("AlgoTools.lua")
-dofile("tools.lua")
+dofile("../misc/AutoEncoderTrainer.lua")
+dofile("../misc/TrainNetwork.lua")
+dofile("../misc/Preload.lua")
 
-dofile("AutoEncoderTrainer.lua")
-dofile("LearnU.lua")
-dofile("SDAECriterionGPU.lua")
-dofile("Appender.lua")
-
+dofile("../tools/CFNTools.lua")
+dofile("../tools/LuaTools.lua")
+dofile("../tools/SDAECriterionGPU.lua")
+dofile("../tools/Appender.lua")
 
 dofile("AlgoGen.lua")
 dofile("NNGen.lua")
@@ -32,8 +32,8 @@ cmd:text('Options')
 cmd:option('-file'           , './dummy.t7'            , 'The relative path to your data file (torch format)')
 cmd:option('-seed'           , 1234                    , 'The seed')
 cmd:option('-gpu'            , 1                       , 'use gpu')
---cmd:option('-noThread'       , 0                     , 'autoencoder type')
 cmd:option('-type'           , "V"                     , 'autoencoder type')
+cmd:option('-meta'           , 1                       , 'use side information')
 cmd:text()
 
 local params = cmd:parse(arg)
