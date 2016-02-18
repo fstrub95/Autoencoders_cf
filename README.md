@@ -24,14 +24,12 @@ Dependencies:
 ```
 git clone git@github.com:fstrub95/Autoencoders_cf.git
 cd Autoencoders_cf
-mkdir data
-mkdir data/movieLens-10M
-cd data/movieLens-10M
+cd data
 wget http://files.grouplens.org/datasets/movielens/ml-10m.zip
-unzip ml-10m.zip .
-cd ../../src
-th data.lua  -ratings ../data/movieLens-10M/ratings.dat -metaItem ../data/movieLens-10M/movies.dat -out ../data/movieLens-10M/movieLens-10M.t7 -fileType movieLens -ratio 0.9
-th main.lua  -file ../data/movieLens-10M/movieLens-10M.t7 -conf ../conf/conf.movieLens.10M.V.lua  -save network.t7 -type V -meta 1 -gpu 1
+unzip ml-10m.zip 
+cd ../src
+th data.lua  -ratings ../data/ml-10M100K/ratings.dat -metaItem ../data/ml-10M100K/movies.dat -out ../data/ml-10M100K/movieLens-10M.t7 -fileType movieLens -ratio 0.9
+th main.lua  -file ../data/ml-10M100K/movieLens-10M.t7 -conf ../conf/conf.movieLens.10M.V.lua  -save network.t7 -type V -meta 1 -gpu 1
 ```
 
 Your network is ready!
@@ -111,9 +109,11 @@ Example:
 if the ratings are included in [1-5]: ```preprocessing(x) return (x-3)/2 end```
 
 
-To compute tags, please use the script sparsesvd.py
+To compute tags, please use the script sparsesvd.py : ```sparsesvd.py [in] [out] [rank]```
+
+Example: 
 ```
-python2 sparsesvd.py [in] [out] [rank]
+python2 sparsesvd.py
 ```
 
 ## STEP 2 : Train the Network##
