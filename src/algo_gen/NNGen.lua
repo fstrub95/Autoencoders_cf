@@ -48,7 +48,7 @@ function NNGen:LoadGene(gene)
          {      
             layerSize = 700,-- gene.layer1,
             { 
-               criterion = nnsparse.SDAECriterionGPU(nn.MSECriterion(),
+               criterion = cfn.SDAECriterionGPU(nn.MSECriterion(),
                   {
                      alpha     = gene.alpha1,
                      beta      = gene.beta1,
@@ -67,7 +67,7 @@ function NNGen:LoadGene(gene)
          {
             layerSize = 500, --gene.layer2,
             { 
-               criterion = nnsparse.SDAECriterionGPU(nn.MSECriterion(),
+               criterion = cfn.SDAECriterionGPU(nn.MSECriterion(),
                   {
                      alpha = gene.alpha3 or 1,
                      beta  = gene.beta3 or 0.8,
@@ -82,7 +82,7 @@ function NNGen:LoadGene(gene)
             },
 
             {
-               criterion = nnsparse.SDAECriterionGPU(nn.MSECriterion(),
+               criterion = cfn.SDAECriterionGPU(nn.MSECriterion(),
                   {
                      alpha     = gene.alpha2 or 0,
                      beta      = gene.beta2 or 0,
@@ -110,7 +110,7 @@ function NNGen:EvaluateAll(genes, genConf)
    
    
       print("Load data...")
-      local train, test, info = LoadData(genConf.file, genConf.file)
+      local train, test, info = LoadData(genConf.file, genConf)
 
       local noGenes = table.Count(genes)
       for i = 1, noGenes do
@@ -119,8 +119,10 @@ function NNGen:EvaluateAll(genes, genConf)
          local gene = genes[i].gene
          self:PrintOne(gene)
          
-         local conf = self:LoadGene(gene) 
-         
+         local conf = self:LoadGene(gene)
+         conf.use_meta = genConf.meta > 0
+         conf.use_gpu  = genConf.gpu  > 0 
+
          genes[i].score = TrainNetwork(train, test, info, conf)
          
          collectgarbage()

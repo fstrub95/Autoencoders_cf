@@ -24,14 +24,13 @@ Dependencies:
 ```
 git clone git@github.com:fstrub95/Autoencoders_cf.git
 cd Autoencoders_cf
-mkdir data
-mkdir data/movieLens-10M
-cd data/movieLens-10M
+cd data
 wget http://files.grouplens.org/datasets/movielens/ml-10m.zip
-unzip ml-10m.zip .
-cd ../../src
-th data.lua  -ratings ../data/movieLens-10M/ratings.dat -metaItem ../data/movieLens-10M/movies.dat -out ../data/movieLens-10M/movieLens-10M.t7 -fileType movieLens -ratio 0.9
-th main.lua  -file ../data/movieLens-10M/movieLens-10M.t7 -conf ../conf/conf.movieLens.10M.V.lua  -save network.t7 -type V -meta 1 -gpu 1
+unzip ml-10m.zip 
+cd ../src
+th data.lua  -ratings ../data/ml-10M100K/ratings.dat -metaItem ../data/ml-10M100K/movies.dat -out ../data/ml-10M100K/movieLens-10M.t7 -fileType movieLens -ratio 0.9
+th main.lua  -file ../data/ml-10M100K/movieLens-10M.t7 -conf ../conf/conf.movieLens.10M.V.lua  -save network.t7 -type V -meta 1 -gpu 1
+th computeMetrics.lua -file ../data/ml-10M100K/movieLens-10M.t7 -network network.t7 -type V -gpu 1
 ```
 
 Your network is ready!
@@ -73,6 +72,15 @@ For information, the datasets contains the following side information
 | [Douban](https://www.cse.cuhk.edu.hk/irwin.king/pub/data/douban)       | true      |  info      |  false    |
 
 
+To compute tags, please use the script sparsesvd.py : ```sparsesvd.py [in] [out] [rank]```
+
+Example: 
+```
+python2 sparsesvd.py ml-10M100K/tags.dat ml-10M100K/tags.dense.csv 50
+th data.lua -xargs ... -tags ml-10M100K/tags.dense.csv
+```
+
+
 If you have want to use external data (for benchmarking purpose), please use the Classic mode. 
 The classic mode takes up to four file as input:
 - training ratings
@@ -105,16 +113,35 @@ Example:
 1 5 -0.1
 ```
 
+
 NB If your ratings are not included in [-1,1], you can modify the function preprocessing() in data/ClassicLoader.lua
+For instance, if the ratings are included in [1-5], use: ```preprocessing(x) return (x-3)/2 end```
+
+**Side information** : 
+You can create two files:
+- [userFileName].txt
+- [itemFileName].txt
+```
+ls dataset*
+dataset.txt.train
+dataset.txt.test
+th data.lua -ratings [fileName] -metaUser [userFileName].txt -metaItem [itemFileName].txt
+```
+Please use the following format for the side information datasets: 
+ - user side info : ```[idUser] [noInfo] [idUserInfo]:[value] [idUserInfo]:[value] ...```
+ - user item info : ```[idItem] [noInfo] [idItemInfo]:[value] [idItemInfo]:[value] ...```
+
+where
+- idUser/idItem > 0 (id must correspond to the training/testing datasets)
+- idUserInfo/idItemInfo > 0 (id must start at 1)
+- value \in [-1;1]
 Example: 
-
-if the ratings are included in [1-5]: ```preprocessing(x) return (x-3)/2 end```
-
-
-To compute tags, please use the script sparsesvd.py
 ```
-python2 sparsesvd.py [in] [out] [rank]
+1 2 5:0.31 12:-1
+2 0
+1 3 5:0.28 4:1 12:0.5
 ```
+
 
 ## STEP 2 : Train the Network##
 
@@ -201,8 +228,7 @@ The SVD and ALS-WR algorithms are provided for benchmarking for medium size data
  - ALS-WR :
 ```
 th ALS.lua  -xargs
-```
-```
+
 -file         The relative path to your data file.              
 -lambda       Rank of the final matrix                             
 -rank         Regularisation                                      
@@ -212,8 +238,7 @@ th ALS.lua  -xargs
  - Gradient :
 ```
 th GradDescent.lua  -xargs
-```
-```
+
 -file         The relative path to your data file.              
 -lambda       Rank of the final matrix                         
 -rank         Regularisation                                     

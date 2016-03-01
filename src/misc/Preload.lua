@@ -32,7 +32,7 @@ function LoadData(file, params)
       require("cunn")
 
 
-      if params.seed > 0 then
+      if params.seed and params.seed > 0 then
          torch.manualSeed(params.seed)
       else
          torch.manualSeed(torch.seed())

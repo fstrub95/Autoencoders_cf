@@ -56,7 +56,8 @@ if not len(sys.argv) == 4:
    print("Example: " + sys.argv[0] + " movieLens-10M/tags.dat movieLens-10M/tags.dense.csv 50")
    sys.exit(1) 
 
-p, d, q, reinditem = returnsvd(sys.argv[1], sys.argv[3])
+rank=int(sys.argv[3])
+p, d, q, reinditem = returnsvd(sys.argv[1], rank)
 f = open(sys.argv[2], "w")
 
 
