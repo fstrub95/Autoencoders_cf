@@ -152,87 +152,65 @@ function  AutoEncoderTrainer:Test(sgdOpt)
       rmseFct.sizeAverage = false
       maeFct.sizeAverage  = false
 
-
       rmse, mae = 0, 0
 
-      --Prepare minibatch
-      local input  = {}
-      local target = {}
-
-      -- prepare meta-data
-      local denseMetadata  = train[1].new(sgdOpt.miniBatchSize, self.info.metaDim or 0)
-      local sparseMetadata = {}
-
-      local i = 1
+      -- Create minibatch
       local noRatings = 0
-
-
-      for k, oneInput in pairs(train) do
-
-         -- Focus on the prediction aspect
-         local oneTarget = test[k]
-
-         -- Ignore data with no testing examples
-         if oneTarget ~= nil then
-
-            -- autoencoder input/target
-            input[i]  = oneInput
-
-            -- bufferize target
-            target[i] = target[i] or oneTarget.new()
-            target[i]:resizeAs(oneTarget):copy(oneTarget)
-
-            -- center the target values
-            target[i][{{}, 2}]:add(-self.info[k].mean)
-
-            -- append metadata
-            if appenderIn then
-               denseMetadata[i]  = self.info[k].full
-               sparseMetadata[i] = self.info[k].fullSparse
-            end
-
-            --compute the current number of ratings
-            noRatings  = noRatings + oneTarget:size(1)
-            i = i + 1
-
-
-            --compute loss when minibatch is ready
-            if #input == sgdOpt.miniBatchSize then
-
-               --Prepare metadata
-               if appenderIn then
-                  appenderIn:prepareInput(denseMetadata, sparseMetadata)
-               end
-               
-               local output = network:forward(input)
-
-               rmse = rmse + rmseFct:forward(output, target)
-               mae  = mae  + maeFct:forward(output, target)
-
-               --reset minibatch
-               input = {}
-               i = 1               
- 
-            end
-         end
-      end
-
-      -- remaining data for minibatch
-      if #input > 0 then
-         local _targets = { unpack(target, 1, #input)} --retrieve a subset of targets
-         
-         if appenderIn then
-            local _sparseMetadata = {unpack(sparseMetadata, 1, #input)}
-            local _denseMetadata =  denseMetadata[{{1, #input},{}}] 
-            
-            appenderIn:prepareInput(_denseMetadata, _sparseMetadata)
-         end
+      local input, target, denseMeta, sparseMeta = {}, {}, {}, {}
+      local minibatch = {}
+      
+      for k, _ in pairs(train) do
+      
+        if test[k] ~= nil then --ignore when there is no target 
+          input     [#input  +1]  = train[k] 
+          target    [#target +1]  = test[k]
+          
+          if appenderIn then
+            denseMeta [#denseMeta + 1]  = self.info[k].full
+            sparseMeta[#sparseMeta+ 1] = self.info[k].fullSparse
+          end
+          
+          noRatings = noRatings + test[k]:size(1)
         
-         local output = network:forward(input)
+          if #input == sgdOpt.miniBatchSize then
+            minibatch[#minibatch+1] = 
+            {
+               input = input, 
+               target = target, 
+               sparseMeta = sparseMeta, 
+               denseMeta = denseMeta
+            }
+            
+            input, target, denseMeta, sparseMeta = {}, {}, {}, {}  
+          end
+        end
+      end
+      
+      if #input > 0 then 
+         minibatch[#minibatch+1] = {
+            input      = input, 
+            target     = target, 
+            sparseMeta = sparseMeta, 
+            denseMeta  = denseMeta
+         }
+      end
+   
 
-         rmse = rmse + rmseFct:forward(output, _targets)
-         mae  = mae  + maeFct:forward(output , _targets)
-     end
+      -- Compute the RMSE by predicting the testing dataset thanks to the training dataset
+      local err = 0
+      for _, oneBatch in pairs(minibatch) do
+      
+        --Prepare metadata
+        if appenderIn then
+           appenderIn:prepareInput(oneBatch.denseMeta, oneBatch.sparseMeta)
+        end
+      
+        local output = network:forward(oneBatch.input)
+        
+        rmse = rmse + rmseFct:forward(output, oneBatch.target)
+        mae  = mae  + maeFct:forward(output, oneBatch.target)
+      end
+      
 
       rmse = rmse/noRatings
       mae  = mae/noRatings

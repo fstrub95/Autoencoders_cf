@@ -2,11 +2,11 @@ function LoadData(file, params)
 
    local use_gpu = params.gpu > 0
    local type    = params.type
-   
+
    if type ~= "U" and type ~= "V" then
       error("Invalid network type : " .. type .. ". It should either be U or V")
    end 
-  
+
    --Load data
    print("Loading data from disk...")
    local data = torch.load(params.file) 
@@ -15,7 +15,7 @@ function LoadData(file, params)
    local train   = data.train[type].data
    local test    = data.test [type].data
    local info    = data.train[type].info
-   
+
    print("")
    print("Users loaded      : " .. data.train.U.info.size)
    print("Items loaded      : " .. data.train.V.info.size)
@@ -64,7 +64,7 @@ function LoadData(file, params)
             info[k]            = info[k]            or {}
             info[k].full       = info[k].full       or torch.Tensor(info.metaDim):zero():cuda()
             info[k].fullSparse = info[k].fullSparse or torch.Tensor():cuda()
-            
+
             info[k].full       = info[k].full:cuda()
             info[k].fullSparse = info[k].fullSparse:cuda()
          end
@@ -74,19 +74,15 @@ function LoadData(file, params)
 
    print("Unbias the data...")
 
-   if type == "U" then -- unbias V
-      for k, u in pairs(train) do
-         info[k]      = info[k]      or {}     
-         info[k].mean = info[k].mean or u[{{}, 2}]:mean()
-      
-         u[{{}, 2}]:add(-info[k].mean) --center input
-      end
-   else -- unbias V
-      for k, v in pairs(train) do
-         info[k]      = info[k]      or {}     
-         info[k].mean = info[k].mean or v[{{}, 2}]:mean()
 
-         v[{{}, 2}]:add(-info[k].mean) --center input
+   for k, oneTrain in pairs(train) do
+      info[k]      = info[k]      or {}     
+      info[k].mean = info[k].mean or oneTrain[{{}, 2}]:mean()
+
+      oneTrain[{{}, 2}]:add(-info[k].mean) --center input
+
+      if test[k] then
+         test[k][{{}, 2}]:add(-info[k].mean)
       end
    end
 
