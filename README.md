@@ -8,7 +8,7 @@ The following module tackles Collaborative Filtering by using sparse denoising a
 
 More information can be found in those papers
 - NIPS workshop: https://hal.archives-ouvertes.fr/hal-01256422/document
-- ICML: to_come
+- ICML (under review): https://hal.archives-ouvertes.fr/hal-01281794
 
 Dependencies:
  - torch
