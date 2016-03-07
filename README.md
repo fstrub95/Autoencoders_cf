@@ -1,4 +1,4 @@
-# Collaborative Filtering with Stacked Denoising Autoencoders and Sparse Inputs
+# Hybrid Collaborative Filtering with Neural Networks
 
 Collaborative Fltering uses the ratings history of users and items. The feedback of one user on some items is
 combined with the feedback of all other users on all items to predict a new rating. 
