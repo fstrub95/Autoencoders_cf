@@ -20,7 +20,7 @@ function AlgoGen:__init(genConf)
    self.ratioMutate = genConf.ratioMutate
    self.ratioNew    = genConf.ratioNew
    
-   self.sigma       = genConf.sigma
+   self.std        = genConf.sigma
    
    assert(self.ratioBest + self.ratioCross + self.ratioMutate + self.ratioNew == 1)
       
@@ -59,9 +59,11 @@ function AlgoGen:MutateOne(gene)
    
    --Generate a new Gene and ramdomly pick one of his element to apply it to the mutated gene
    local newGene  = table.Copy(gene)
-   for key, value in pairs(geneA) do
+   for key, value in pairs(gene) do
       if type(value) == "number" then
-         newGene[key] = torch.normal(value, self.std)
+         local pow10 = math.floor(math.log10(value))
+         local std   = self.std * math.pow(10, pow10)
+         newGene[key] = torch.normal(value, std)
       end
    end
    return newGene  
@@ -165,7 +167,6 @@ function AlgoGen:Learn()
       
       
       -- Mutate gene in set1
-      self.std = self.sigma / math.pow(table.Count(genes), 1/table.Count(genes[1].gene))
       for k = 1, noMutate do
          local geneA =  S1[math.random( 1, #S1 )].gene
          local newGene = { gene = self:MutateOne(geneA), score = NaN }
