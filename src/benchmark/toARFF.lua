@@ -7,8 +7,8 @@ torch.setdefaulttensortype('torch.FloatTensor')
 
 require("nnsparse")
 
-dofile("../tools/LuaTools.lua")
-dofile("../tools/BenchmarkTools.lua")
+dofile("tools/LuaTools.lua")
+dofile("tools/BenchmarkTools.lua")
 
 
 cmd = torch.CmdLine()
@@ -48,10 +48,29 @@ local test    = torchdata.test ["U"].data
 
 --create split file
 local splitFile = io.open(params.outSplit, "w")
-local arfFile   = io.open(params.outArff, "w")
+local arffFile   = io.open(params.outArff, "w")
 
-arfFile:write("@DATA", "\n")
 
+arffFile:write("@RELATION movievote", "\n")
+arffFile:write("@ATTRIBUTE UserId NUMERIC", "\n")
+
+local itemInfo = torchdata.train.V.info
+for k = 1, torchdata.train.V.info.size do
+    
+    local oneInfo = torchdata.train.V.info[k]
+    if oneInfo then
+    
+      local title = oneInfo.title or ""
+      local id    = oneInfo.id    or -1
+      
+      arffFile:write("@ATTRIBUTE 'Rate for item (".. title ..") with id [" .. id .. "] for index [".. k .."]'\tNUMERIC","\n")
+    end
+    
+end
+
+
+arffFile:write("", "\n")
+arffFile:write("@DATA", "\n")
 for idUser, oneTrain in pairs(train) do
    
    xlua.progress(idUser, #train)
@@ -79,8 +98,10 @@ for idUser, oneTrain in pairs(train) do
    end
    line = line .. "}"
    
-   arfFile:write(line, "\n")
+   arffFile:write(line, "\n")
    
 end
+
+
 
 
