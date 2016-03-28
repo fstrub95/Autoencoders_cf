@@ -56,7 +56,6 @@ end
 
 function AlgoGen:MutateOne(gene) 
    
-   
    --Generate a new Gene and ramdomly pick one of his element to apply it to the mutated gene
    local newGene  = table.Copy(gene)
    for key, value in pairs(gene) do
@@ -149,10 +148,6 @@ function AlgoGen:Learn()
 
       -- Copy Best genes
       table.merge(newGenes, S1)
-  
-  
-     local val, key = table.Random( geneBuf )   
-   local newGene  = table.Copy(gene)
   
   
       -- Cross Over set1 and set2

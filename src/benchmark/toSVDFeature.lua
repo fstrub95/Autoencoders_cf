@@ -7,9 +7,8 @@ torch.setdefaulttensortype('torch.FloatTensor')
 
 require("nnsparse")
 
-dofile("../AlgoTools.lua")
-dofile("../tools.lua")
-
+dofile("../tools/LuaTools.lua")
+dofile("../tools/BenchmarkTools.lua")
 
 
 cmd = torch.CmdLine()
@@ -35,11 +34,6 @@ end
 --Load data
 print("loading data...")
 local data = torch.load(params.file)
-
-print(data.train.U.info.size .. " Users loaded")
-print(data.train.V.info.size .. " Items loaded")
-print("No Train rating : " .. data.train.U.info.noRating)
-print("No Test  rating : " .. data.test.U.info.noRating)
 
 local train   = data.train["U"].data
 local test    = data.test ["U"].data
@@ -67,10 +61,13 @@ local function getInfo(oneInfo, size)
       end
       oneInfo.line = oneLine
       oneInfo.dim  = dim
-
+   else
+       oneInfo = oneInfo or {}
+       oneInfo.line = oneInfo.line or ""
+       oneInfo.dim  = oneInfo.dim  or 0
    end
    
-   return oneInfo or { line = "", dim = 0 }
+   return oneInfo
 end
 
 
@@ -104,6 +101,7 @@ local function computeFile(samples, path)
          uLine = uLine .. uInfo.line
 
          local vInfo = getInfo(allInfoV[j], data.train.V.size)
+
          vDim  = vDim + vInfo.dim   
          vLine = vLine .. vInfo.line
 
@@ -118,5 +116,5 @@ local function computeFile(samples, path)
 
 end
 
-computeFile(train, params.out .. ".train")
+--computeFile(train, params.out .. ".train")
 computeFile(test , params.out .. ".test")
