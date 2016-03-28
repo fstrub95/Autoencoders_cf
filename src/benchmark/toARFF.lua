@@ -7,8 +7,8 @@ torch.setdefaulttensortype('torch.FloatTensor')
 
 require("nnsparse")
 
-dofile("tools/LuaTools.lua")
-dofile("tools/BenchmarkTools.lua")
+dofile("../tools/LuaTools.lua")
+dofile("../tools/BenchmarkTools.lua")
 
 
 cmd = torch.CmdLine()
@@ -56,18 +56,11 @@ arffFile:write("@ATTRIBUTE UserId NUMERIC", "\n")
 
 local itemInfo = torchdata.train.V.info
 for k = 1, torchdata.train.V.info.size do
-    
-    local oneInfo = torchdata.train.V.info[k]
-    if oneInfo then
-    
-      local title = oneInfo.title or ""
-      local id    = oneInfo.id    or -1
-      
-      arffFile:write("@ATTRIBUTE 'Rate for item (".. title ..") with id [" .. id .. "] for index [".. k .."]'\tNUMERIC","\n")
-    end
-    
+   arffFile:write("@ATTRIBUTE 'Title ".. k .."' NUMERIC","\n")
 end
 
+
+local function postprocess(x) return 2*x+3 end
 
 arffFile:write("", "\n")
 arffFile:write("@DATA", "\n")
@@ -93,7 +86,7 @@ for idUser, oneTrain in pairs(train) do
    local line = "{0 " .. idUser
    for k = 1, data:size(1) do
       local idItem = data[k][1]
-      local rating = data[k][2]
+      local rating = postprocess(data[k][2])
       line = line .. ", " .. idItem .. " " .. rating 
    end
    line = line .. "}"
