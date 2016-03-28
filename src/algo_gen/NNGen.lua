@@ -6,7 +6,7 @@ function NNGen:GenerateOne()
    self.nnType = NN_TYPE
 
    local gene = {}
-   gene.layer1       = torch.random (500 , 700)
+   gene.layer1       = torch.random (400 , 700)
    gene.alpha1       = torch.uniform(0.8 , 1.2)
    gene.beta1        = torch.uniform(0   , 1)
    gene.hide1        = torch.uniform(0   , 0.5)
@@ -46,7 +46,7 @@ function NNGen:LoadGene(gene)
       {
          layer1 = 
          {      
-            layerSize = 700,-- gene.layer1,
+            layerSize = gene.layer1,
             { 
                criterion = cfn.SDAECriterionGPU(nn.MSECriterion(),
                   {
@@ -54,7 +54,7 @@ function NNGen:LoadGene(gene)
                      beta      = gene.beta1,
                      hideRatio = gene.hide1,
                   }), 
-               noEpoch           = 15, 
+               noEpoch           = 10, 
                miniBatchSize     = 35, -- gene.batch1,
                learningRate      = gene.lrt1,  
                learningRateDecay = gene.lrtDecay1,
