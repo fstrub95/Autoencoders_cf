@@ -9,7 +9,7 @@ The following module tackles Collaborative Filtering by using sparse denoising a
 More information can be found in those papers
 - Collaborative Filtering with Stacked Denoising
 AutoEncoders and Sparse Inputs (NIPS workshop - ecommerce): https://hal.archives-ouvertes.fr/hal-01256422/document
-- Hybrid Collaborative Filtering with Neural Networks (ICML - under review ): https://hal.archives-ouvertes.fr/hal-01281794
+- Hybrid Collaborative Filtering with Autoencoders (tocome): 
 
 [TEMPO] A step-by-step tutorial is available [here](https://github.com/fstrub95/torch.github.io/blob/master/blog/_posts/2016-02-21-cfn.md) . It will be pushed soon :) 
 
