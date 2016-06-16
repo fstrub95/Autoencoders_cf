@@ -11,7 +11,7 @@ config =
             beta  = 0.54054440256139,
             hideRatio = 0.25688179776383,
          }), 
-         noEpoch = 20, 
+         noEpoch = 50, 
          miniBatchSize = 35,
          learningRate = 0.069180836029247,  
          learningRateDecay = 0.29623809751744,
