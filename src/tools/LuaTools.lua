@@ -113,7 +113,7 @@ function GetSize(X,dim)
    end
 end
 
-local function GetnElement(X) 
+function GetnElement(X) 
    if torch.isTensor(X)  then 
       return X:nElement()
    elseif torch.type(X) == "table" then 
