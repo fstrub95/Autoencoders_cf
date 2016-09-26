@@ -43,12 +43,7 @@ function TrainNetwork(train, test, info, config)
                encoders[i]:add(cfn.AppenderSparseOut(appenderIn)) 
             end
             
-            if config.use_gpu then
-               encoders[i]:add(nnsparse.Densify(bottleneck[i-1] + metaDim)) 
-               encoders[i]:add(      nn.Linear (bottleneck[i-1] + metaDim, bottleneck[i]))
-            else
-               encoders[i]:add(nnsparse.SparseLinearBatch(bottleneck[i-1] + metaDim, bottleneck[i], false))
-            end     
+            encoders[i]:add(nnsparse.SparseLinearBatch(bottleneck[i-1] + metaDim, bottleneck[i], false))
                       
          else --dense input
          
