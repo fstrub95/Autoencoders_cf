@@ -40,27 +40,19 @@ function SDAECriterionGPU:prepareInput(inputs)
       self.mask       = self.mask or inputs[1].new()   
       self.mask:resize(#inputs, self.inputDim):zero()
 
-      self.alphaMask = self.alphaMask or inputs[1].new()
-      self.betaMask  = self.betaMask  or inputs[1].new()
+      self.alphaMask = self.alphaMask or torch.ByteTensor()
+      self.betaMask  = self.betaMask  or torch.ByteTensor()
 
-      self.alphaIndex = self.alphaIndex or inputs[1].new()
-      self.betaIndex  = self.betaIndex  or inputs[1].new()
+      self.alphaIndex = self.alphaIndex or torch.LongTensor()
+      self.betaIndex  = self.betaIndex  or torch.LongTensor()
 
       for k, oneInput in pairs(inputs) do
 
-         local index = oneInput[{{},1}]
+         local index = oneInput[{{},1}]:long()
 
          --compte mask (lt et eq does not have inplace equivalent)
          self.alphaMask:resize(index:size()):bernoulli(self.hideRatio)
          self.betaMask:resize(index:size()):fill(1):add(-1,self.alphaMask)
-
-        if torch.type(index) ~= "torch.CudaTensor" then
-            index = index:long() 
-            self.alphaMask  = self.alphaMask:byte()
-            self.betaMask   = self.betaMask:byte()
-            self.alphaIndex = self.alphaIndex:long()
-            self.betaIndex  = self.betaIndex:long()
-         end
 
          self.alphaIndex:maskedSelect(index, self.alphaMask)
          self.betaIndex:maskedSelect(index, self.betaMask)
