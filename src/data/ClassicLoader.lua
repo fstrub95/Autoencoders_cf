@@ -46,7 +46,7 @@ local function getRegex(noElem)
       assert(noElem > 0)
       local regex = __regexTable[noElem]
       if regex == nil then
-         regex = "(%d:%-?%d%.?%d*)" --regex for -2.126 --> no standard regex for numbers in lua :(
+         regex = "(%d+:%-?%d%.?%d*)" --regex for -2.126 --> no standard regex for numbers in lua :(
          for k = 1, noElem-1 do regex = regex .. " (%d:%-?%d%.?%d*)" end
          __regexTable[noElem] = regex 
       end
@@ -89,7 +89,7 @@ function classicLoader:LoadMeta(fileName, type, GetXindex)
             local idInfo  = tonumber(idInfoStr)
             local valInfo = tonumber(valInfoStr)
    
-            maxId = math.max(maxId, idInfo)
+            maxId = math.max(maxId, idInfo) + offset
    
             sparseTensor:append(torch.Tensor{idInfo + offset, valInfo})
          end
@@ -111,7 +111,7 @@ function classicLoader:LoadMeta(fileName, type, GetXindex)
 
    --compute dense side information by using the maximum id of side information
    for _, oneInfo in pairs(self.train[type].info) do
-      if oneInfo.fullSparse then
+      if type(oneInfo) == "table" and oneInfo.fullSparse then
          oneInfo.full = densify(oneInfo.fullSparse,maxId)
       else
          oneInfo.full       = torch.zeros(maxId)
