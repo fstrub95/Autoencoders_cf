@@ -49,7 +49,7 @@ function AutoEncoderTrainer:Train(sgdOpt, epoch)
 
    -- shuffle index for data
    local noSample = self.info.size
-   local shuffle  = torch.randperm(noSample)
+   local shuffle  = torch.randperm(noSample-1)
 
 
    -- Start training

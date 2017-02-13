@@ -47,9 +47,15 @@ function Batchifier:forward(data, batchSize)
    if torch.isTensor(data) then
    
       if self.appenderIn then
-         local denseInfo  = data[1].new(self.info.size, self.info.metaDim)
+         local denseInfo  = data[1].new(self.info.size, self.info.metaDim):zero()
          for k = 1, data:size(1) do
-            denseInfo[k] = self.info[k] or 0
+            if torch.isTensor(self.info) then
+              denseInfo[k] = self.info[k]
+            else
+              if self.info[k] then
+                denseInfo[k] = self.info[k].full
+              end
+            end
          end
          self.appenderIn:prepareInput(denseInfo)
       end
@@ -59,8 +65,10 @@ function Batchifier:forward(data, batchSize)
       
    batchSize = batchSize or 20
    
-   local nFrame    = GetnElement(data)
-
+   local nFrame    = 0
+   for k, _ in pairs(data) do nFrame = k end
+   nFrame = nFrame
+   
    --Prepare minibatch
    local inputs   = {}
    local outputs  = data[1].new(nFrame, self.outputSize) 
