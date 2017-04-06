@@ -171,9 +171,6 @@ end
 
 local function testNN(network)
 
-   local criterion = nnsparse.SparseCriterion(nn.MSECriterion())
-
-
    -- Create minibatch
    local noRatings = 0
    local input, target, minibatch = {}, {}, {}
@@ -199,6 +196,7 @@ local function testNN(network)
    -- define the testing criterion
    local criterion = nnsparse.SparseCriterion(nn.MSECriterion())
    criterion.sizeAverage = false
+
 
    -- Compute the RMSE by predicting the testing dataset thanks to the training dataset
    local err = 0

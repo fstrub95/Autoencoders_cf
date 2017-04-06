@@ -5,7 +5,21 @@ cfn = cfn or {}
 local AppenderIn, parent = torch.class('cfn.AppenderIn')
 
 function AppenderIn:prepareInput(denseInput, sparseInput)
-   self.input       = denseInput
+
+   if torch.type(denseInput) == "table" then
+      local xSize = #denseInput
+      local ySize = denseInput[1]:size(1)
+   
+      self.input = self.input or denseInput[1].new()
+      self.input:resize(xSize, ySize)
+      
+      for k, oneInput in pairs(denseInput) do
+         self.input[k] = oneInput
+      end
+   else
+      self.input = denseInput
+   end
+
    self.sparseInput = sparseInput
 end
 
