@@ -12,6 +12,9 @@ function algoTrain(train, test, algo, conf)
    local bestLoss = 999
 
    local noEpoch = conf.epoches or 15
+   
+   local patience = conf.patience or 3  -- patience
+   local noEarly  = 1
 
    for t = 1, noEpoch do
 
@@ -36,11 +39,15 @@ function algoTrain(train, test, algo, conf)
       print("Loss = " .. math.sqrt(curLoss)*2)
 
       if curLoss > bestLoss then
-         print("early stopping")
-         break
+         noEarly = noEarly + 1
+         if noEarly > patience then 
+            print("early stopping")
+            break 
+         end
       else
+         noEarly = 1
          bestLoss = curLoss
-      end 
+      end
 
    end
 
