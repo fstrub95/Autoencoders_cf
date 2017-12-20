@@ -129,7 +129,7 @@ function classicLoader:LoadMetaU(conf)
    end
 end
 
-function classicLoader:LoadMetaU(conf) 
+function classicLoader:LoadMetaV(conf) 
    if #conf.metaItem > 0 then
       self:LoadMeta(conf.metaItem, "V", self.getItemIndex) 
    end
