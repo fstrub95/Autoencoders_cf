@@ -22,7 +22,7 @@ Dependencies:
 
 (optional) anaconda2
 
-## SUMMARY ##
+## Summary
 
 ```
 git clone git@github.com:fstrub95/Autoencoders_cf.git
@@ -41,7 +41,7 @@ Your network is ready!
 (Average time ~25min)
 
 
-## STEP 1 : Convert the dataset##
+## Step 1 : Convert the dataset
 
 ```
 th data.lua  -xargs
@@ -146,7 +146,7 @@ Example:
 ```
 
 
-## STEP 2 : Train the Network##
+## Step 2 : Train the Network
 
 ```
 th main.lua  -xargs
@@ -216,7 +216,7 @@ Autoencoders are iteratively trained, stacked and fine-tuned.
 }
 ```
 
-## STEP 3 : Recommender System ##
+## Step 3 : Recommender System
 
 Once the network is trained, it is possible to use it as a recommender system.
 For now, it is possible to compute the RMSE by sorting the users/items regarding their number of ratings.
